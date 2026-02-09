@@ -88,21 +88,53 @@ AFRAME.registerComponent('grab-manager', {
     const scene = this.el.sceneEl;
     
     // Wait for scene load
+    // Attach listeners when scene is loaded; also support late controller connections
     scene.addEventListener('loaded', () => {
-      // Support both hand-controls and platform-specific controller components
-      const hands = scene.querySelectorAll('a-entity[hand-controls], a-entity[oculus-touch-controls]');
-      console.log('✅ Grab manager found hands:', hands.length);
-      
-      hands.forEach((hand) => {
-        hand.addEventListener('triggerdown', () => {
-          this.tryGrab(hand);
-        });
-        
-        hand.addEventListener('triggerup', () => {
-          this.tryRelease(hand);
-        });
-      });
+      this.attachToHands();
     });
+
+    // If controllers connect after load, attach to them as well
+    scene.addEventListener('controllerconnected', (ev) => {
+      try {
+        const hand = ev.detail && ev.detail.component ? ev.target : ev.target;
+        if (hand) this.attachToHand(hand);
+      } catch (e) {}
+    });
+
+    // Fallback: poll for hands for a short time (useful in some browsers/platforms)
+    let tries = 0;
+    const poll = setInterval(() => {
+      tries++;
+      this.attachToHands();
+      if (tries > 6) clearInterval(poll);
+    }, 1000);
+  },
+
+  attachToHands: function () {
+    const scene = this.el.sceneEl;
+    if (!scene) return;
+    const hands = scene.querySelectorAll('a-entity[hand-controls], a-entity[oculus-touch-controls]');
+    // console.log('grab-manager: attachToHands check, found', hands.length);
+    hands.forEach(h => this.attachToHand(h));
+  },
+
+  attachToHand: function (hand) {
+    if (!hand || hand._grabAttached) return;
+    try {
+      const downHandler = () => this.tryGrab(hand);
+      const upHandler = () => this.tryRelease(hand);
+      hand.addEventListener('triggerdown', downHandler);
+      hand.addEventListener('triggerup', upHandler);
+      // also support grip events as alternative input
+      hand.addEventListener('gripdown', downHandler);
+      hand.addEventListener('gripup', upHandler);
+      // mark attached so we don't double-add
+      hand._grabAttached = true;
+      hand._grabHandlers = { downHandler, upHandler };
+      console.log('🎣 grab-manager: attached handlers to hand', hand.id || hand);
+    } catch (e) {
+      console.warn('grab-manager: failed to attach to hand', e);
+    }
   },
 
   tryGrab: function (hand) {

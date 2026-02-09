@@ -17,6 +17,7 @@
   <script src="src/components/water-effect.js"></script>
   <script src="src/components/water-adapter.js"></script>
   <script src="src/components/grab-manager.js"></script>
+  <script src="src/components/spear-bounce.js"></script>
   <script src="src/components/bubble-spawner.js"></script>
   <script src="src/components/fish-rotator.js"></script>
   <script src="src/components/coral-placer.js"></script>
@@ -56,7 +57,7 @@
   </div>
 
   <!-- Scène A-Frame avec configuration WebXR native pour AR -->
-  <a-scene webxr="referenceSpaceType: local-floor; overlayElement: #ar-overlay; requiredFeatures: local-floor, hit-test, plane-detection, mesh-detection; optionalFeatures: depth-sensing, anchors;" room-detection
+  <a-scene webxr="referenceSpaceType: local-floor; overlayElement: #ar-overlay; requiredFeatures: local-floor, hit-test, plane-detection, mesh-detection; optionalFeatures: depth-sensing, anchors;" room-detection="enableTest: true"
     grab-manager
     physics="gravity: 0"
     fog="type: exponential; color: #001a33; density: 0.02"
@@ -79,6 +80,7 @@
       <a-camera id="head" look-controls>
         <!-- Cursor for mouse (desktop) and gaze interactions -->
         <a-entity cursor="rayOrigin: mouse" raycaster="objects: .clickable" position="0 0 -1"></a-entity>
+        
         <a-entity id="bonus-fish" position="-0.15 0.2 -0.7" scale="0.8 0.8 0.8" visible="false">
           <a-plane color="#1a1a1a" opacity="0.9" width="0.38" height="0.28" position="0 0 -0.015"></a-plane>
           <a-box color="#FFD700" width="0.38" height="0.015" depth="0.01" position="0 0.14 0" material="metalness: 0.8; roughness: 0.2"></a-box>
@@ -149,12 +151,13 @@
 
       <!-- Spear model (replace the blue cube) - grabbable -->
       <a-entity id="spear" weapon position="0 1.45 -0.6" rotation="0 90 0" 
-            class="weapon"
-            geometry="primitive: box; width: 0.05; height: 0.05; depth: 0.6" 
-            material="color: #ff0000; opacity: 0.3; transparent: true"
-            gltf-model="#spear-model"
-            scale="0.5 0.5 0.5"
-            dynamic-body="mass:1">
+        class="weapon"
+        geometry="primitive: box; width: 0.05; height: 0.05; depth: 0.6" 
+        material="color: #ff0000; opacity: 0.3; transparent: true"
+        gltf-model="#spear-model"
+        scale="0.5 0.5 0.5"
+        dynamic-body="mass:1"
+        spear-bounce="restitution:0.72; minSpeed:0.12">
       </a-entity>
 
       <!-- Les poissons seront générés automatiquement par fish-spawner après le scan de la pièce -->

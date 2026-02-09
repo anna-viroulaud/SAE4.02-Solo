@@ -910,6 +910,17 @@ AFRAME.registerComponent('room-detection', {
         }
 
         planeData.obstacleType = type;
+        // For tables, expand vertical bounds to represent a small volume above the surface
+        if (type === 'table') {
+          // Give a sensible vertical thickness so fish above the table are considered colliding
+          const extraTop = Math.min(1.2, Math.max(0.6, planeWidth * 0.2 + planeDepth * 0.05));
+          const extraBottom = 0.05; // small tolerance below plane
+          // Update bounds to include that volume (cap by previously known room bounds if available)
+          planeData.bounds.minY = (planeData.bounds.minY !== undefined) ? (planeData.bounds.minY - extraBottom) : (avgY - extraBottom);
+          planeData.bounds.maxY = (planeData.bounds.maxY !== undefined) ? (planeData.bounds.maxY + extraTop) : (avgY + extraTop);
+          // Store approximate obstacle height for later static-body creation
+          planeData.obstacleHeight = planeData.bounds.maxY - planeData.bounds.minY;
+        }
         this.obstaclePlanes.push({ plane, data: planeData });
 
         if (this.data.debug && type !== 'table') {
@@ -1283,6 +1294,13 @@ AFRAME.registerComponent('room-detection', {
       window.FISH_ZONE.floorY = roomData.floorY;
       window.FISH_ZONE.ceilingY = roomData.floorY + roomData.height;
       window.FISH_ZONE.scanned = true;
+      // Exposer aussi les obstacles et murs détectés pour les spawners
+      try {
+        // Before exposing obstacles, create invisible static-body volumes for detected tables
+        try { this._createStaticTableBodies(); } catch(e) { /* ignore */ }
+        window.FISH_ZONE.obstacles = this.obstaclePlanes || [];
+        window.FISH_ZONE.wallPlanes = this.wallPlanes || [];
+      } catch (e) { /* ignore */ }
     }
 
     // Émettre l'événement avec les données (INCLURE orientedBox!)
@@ -1341,6 +1359,48 @@ AFRAME.registerComponent('room-detection', {
     };
 
     fade();
+  },
+
+  _createStaticTableBodies: function () {
+    // Create invisible A-Frame static bodies for each detected table so physics and
+    // other components can collide with the whole table surface (not just edges).
+    if (!this.obstaclePlanes || this.obstaclePlanes.length === 0) return;
+    const scene = this.el.sceneEl;
+    let idx = 0;
+    this.obstaclePlanes.forEach(({ data }) => {
+      try {
+        if (!data || data.obstacleType !== 'table') return;
+
+        const bounds = data.bounds || {};
+        const width = (bounds.maxX - bounds.minX) || (data.dimensions && data.dimensions.width) || 0.5;
+        const depth = (bounds.maxZ - bounds.minZ) || (data.dimensions && data.dimensions.depth) || 0.5;
+        const minY = (bounds.minY !== undefined) ? bounds.minY : (data.worldY || 0);
+        const maxY = (bounds.maxY !== undefined) ? bounds.maxY : (data.worldY || 0) + 0.8;
+        const height = Math.max(0.05, maxY - minY);
+        const centerX = (bounds.minX + bounds.maxX) / 2 || (data.position && data.position.x) || 0;
+        const centerZ = (bounds.minZ + bounds.maxZ) / 2 || (data.position && data.position.z) || 0;
+        const centerY = (minY + maxY) / 2;
+
+        const ent = document.createElement('a-box');
+        ent.classList.add('table-obstacle');
+        ent.setAttribute('id', `table-obstacle-${idx}`);
+        ent.setAttribute('position', `${centerX} ${centerY} ${centerZ}`);
+        ent.setAttribute('width', `${Math.max(0.05, width)}`);
+        ent.setAttribute('depth', `${Math.max(0.05, depth)}`);
+        ent.setAttribute('height', `${height}`);
+        // Keep invisible (non-visible) to avoid duplicating the yellow visual
+        ent.setAttribute('visible', 'false');
+        // Add physics static-body so dynamic objects (spear) can collide
+        ent.setAttribute('static-body', '');
+        // Also mark for debugging if needed
+        ent.setAttribute('data-obstacle-type', 'table');
+
+        scene.appendChild(ent);
+        idx++;
+      } catch (e) {
+        // ignore single obstacle failures
+      }
+    });
   },
 
   remove: function () {
