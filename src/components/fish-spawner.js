@@ -28,6 +28,9 @@ AFRAME.registerComponent('fish-movement', {
     this.bobAmplitude = 0.003 + Math.random() * 0.006; // meters (small)
     this.bobOffset = Math.random() * Math.PI * 2;
 
+    // Last obstacle collided (used to compute escape direction)
+    this._lastCollisionObstacle = null;
+
     // Utiliser les données globales de la zone
     this.roomBounds = null;
     this.orientedBox = null;
@@ -326,50 +329,181 @@ AFRAME.registerComponent('fish-movement', {
   },
 
   _checkObstacleCollision: function (pos, nextPos) {
-    // Vérifier collision avec les tables et obstacles
+    // Vérifier collision avec les tables et obstacles (volume solide)
     if (!this.obstacles || this.obstacles.length === 0) return false;
-    
+
     let collision = false;
-    const fishRadius = 0.15;
-    
-    this.obstacles.forEach(obstacle => {
-      const obsData = obstacle.data;
-      const obsPos = obsData.position;
+    const fishRadius = 0.03;
+
+    for (let i = 0; i < this.obstacles.length; i++) {
+      const obs = this.obstacles[i];
+      const obsData = obs.data || {};
       const bounds = obsData.bounds;
-      
-      if (!obsPos || !bounds) return;
-      
-      // Calculer si le poisson entre dans la boîte de l'obstacle
+      if (!bounds) continue;
+
+      // Pour les tables, considérer un volume solide du sol jusqu'à la surface
+      let effectiveMinY = bounds.minY !== undefined ? bounds.minY : (obsData.worldY || 0);
+      let effectiveMaxY = bounds.maxY !== undefined ? bounds.maxY : (obsData.worldY || 0);
+      const obsType = obsData.obstacleType || '';
+      if (obsType === 'table' || obsType === 'meuble_bas' || obsType === 'etagere' || obsType === 'obstacle') {
+        effectiveMinY = this.floorY;
+        effectiveMaxY = (bounds.maxY || (obsData.worldY || 0)) + 0.05;
+      }
+
       const inX = nextPos.x > bounds.minX - fishRadius && nextPos.x < bounds.maxX + fishRadius;
-      const inY = nextPos.y > bounds.minY - fishRadius && nextPos.y < bounds.maxY + fishRadius;
+      const inY = nextPos.y > effectiveMinY - fishRadius && nextPos.y < effectiveMaxY + fishRadius;
       const inZ = nextPos.z > bounds.minZ - fishRadius && nextPos.z < bounds.maxZ + fishRadius;
-      
+
       if (inX && inY && inZ) {
-        // Collision détectée ! Rebondir intelligemment
-        const dx = nextPos.x - obsPos.x;
-        const dy = nextPos.y - obsPos.y;
-        const dz = nextPos.z - obsPos.z;
-        
-        // Rebondir selon l'axe le plus proche
-        if (Math.abs(dx) > Math.abs(dz)) {
-          this.velocity.x *= -1;
-          nextPos.x = pos.x;
+        // Collision détectée: calculer pénétration par face et repousser sur la face la plus proche
+        // Record the obstacle we collided with for use by the tick handler
+        try { this._lastCollisionObstacle = obsData; } catch (e) { this._lastCollisionObstacle = null; }
+        const penLeft = nextPos.x - (bounds.minX - fishRadius);
+        const penRight = (bounds.maxX + fishRadius) - nextPos.x;
+        const penBottom = nextPos.y - (effectiveMinY - fishRadius);
+        const penTop = (effectiveMaxY + fishRadius) - nextPos.y;
+        const penFront = nextPos.z - (bounds.minZ - fishRadius);
+        const penBack = (bounds.maxZ + fishRadius) - nextPos.z;
+
+        const pens = [
+          { axis: 'x', pen: penLeft, sign: -1 },
+          { axis: 'x', pen: penRight, sign: 1 },
+          { axis: 'y', pen: penBottom, sign: -1 },
+          { axis: 'y', pen: penTop, sign: 1 },
+          { axis: 'z', pen: penFront, sign: -1 },
+          { axis: 'z', pen: penBack, sign: 1 }
+        ];
+        pens.sort((a, b) => a.pen - b.pen);
+        const best = pens[0];
+
+        // Eject along the smallest penetration axis
+        if (best.axis === 'x') {
+          if (best.sign === -1) {
+            nextPos.x = bounds.minX - fishRadius - 0.03;
+            this.velocity.x = -Math.abs(this.velocity.x) * 1.2;
+          } else {
+            nextPos.x = bounds.maxX + fishRadius + 0.03;
+            this.velocity.x = Math.abs(this.velocity.x) * 1.2;
+          }
+        } else if (best.axis === 'y') {
+          if (best.sign === -1) {
+            nextPos.y = effectiveMinY - fishRadius - 0.03;
+            this.velocity.y = -Math.abs(this.velocity.y) * 1.2;
+          } else {
+            nextPos.y = effectiveMaxY + fishRadius + 0.03;
+            this.velocity.y = Math.abs(this.velocity.y) * 1.2;
+          }
         } else {
-          this.velocity.z *= -1;
-          nextPos.z = pos.z;
+          if (best.sign === -1) {
+            nextPos.z = bounds.minZ - fishRadius - 0.03;
+            this.velocity.z = -Math.abs(this.velocity.z) * 1.2;
+          } else {
+            nextPos.z = bounds.maxZ + fishRadius + 0.03;
+            this.velocity.z = Math.abs(this.velocity.z) * 1.2;
+          }
         }
-        
-        // Si collision verticale (dessus/dessous de table)
-        if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > Math.abs(dz)) {
-          this.velocity.y *= -1;
-          nextPos.y = pos.y;
-        }
-        
+
         collision = true;
       }
-    });
-    
+    }
+
     return collision;
+  },
+
+  // Compute a target point away from an obstacle so the fish will swim off
+  _escapeFromObstacle: function (obsData, fromPos) {
+    if (!obsData || !fromPos) return this._pickNewTarget();
+    const bounds = obsData.bounds || {};
+    // Compute approximate center of obstacle
+    const cx = (bounds.minX + bounds.maxX) / 2 || (obsData.position && obsData.position.x) || 0;
+    const cz = (bounds.minZ + bounds.maxZ) / 2 || (obsData.position && obsData.position.z) || 0;
+    const minY = (bounds.minY !== undefined) ? bounds.minY : (this.floorY || 0);
+    const maxY = (bounds.maxY !== undefined) ? bounds.maxY : (obsData.worldY || (this.floorY || 0) + 0.5);
+    const cy = (minY + maxY) / 2;
+
+    const center = new THREE.Vector3(cx, cy, cz);
+    let dir = fromPos.clone().sub(center);
+    if (dir.lengthSq() < 0.0001) {
+      // If we're exactly on the center, pick a random horizontal direction
+      dir = new THREE.Vector3(Math.random() - 0.5, 0.1, Math.random() - 0.5).normalize();
+    } else {
+      dir.normalize();
+      // Slight upward bias so fish can swim over small obstacles
+      dir.y = Math.max(0.05, dir.y || 0.05);
+      dir.normalize();
+    }
+
+    // Desired escape distance (proportional to room size if available)
+    let escapeDist = 1.0;
+    if (this.roomBounds) {
+      const roomWidth = Math.abs(this.roomBounds.maxX - this.roomBounds.minX || 2);
+      const roomDepth = Math.abs(this.roomBounds.maxZ - this.roomBounds.minZ || 2);
+      escapeDist = Math.max(1.0, Math.min(3.0, Math.max(roomWidth, roomDepth) * 0.4));
+    }
+
+    const target = fromPos.clone().add(dir.multiplyScalar(escapeDist));
+
+    // Clamp target inside room bounds if available
+    if (this.roomBounds && isFinite(this.roomBounds.minX)) {
+      target.x = Math.max(this.roomBounds.minX + 0.2, Math.min(this.roomBounds.maxX - 0.2, target.x));
+      target.y = Math.max(this.floorY + 0.2, Math.min(this.ceilingY - 0.2, target.y));
+      target.z = Math.max(this.roomBounds.minZ + 0.2, Math.min(this.roomBounds.maxZ - 0.2, target.z));
+    }
+
+    this.target.copy(target);
+    // Give a push towards the escape direction
+    try {
+      const push = this.target.clone().sub(fromPos).normalize().multiplyScalar(this.speed * 1.2);
+      this.velocity.add(push);
+    } catch (e) { /* ignore */ }
+    // Clear last collision marker
+    this._lastCollisionObstacle = null;
+  },
+
+  // Vérifie si un point est à l'intérieur d'un obstacle (utilisé pour choisir des targets)
+  _isInsideObstacle: function (point) {
+    if (!this.obstacles || this.obstacles.length === 0) return false;
+    const fishRadius = 0.03;
+    for (let i = 0; i < this.obstacles.length; i++) {
+      const obsData = this.obstacles[i].data || {};
+      const bounds = obsData.bounds;
+      if (!bounds) continue;
+      let effectiveMinY = bounds.minY !== undefined ? bounds.minY : (obsData.worldY || 0);
+      let effectiveMaxY = bounds.maxY !== undefined ? bounds.maxY : (obsData.worldY || 0);
+      const obsType = obsData.obstacleType || '';
+      if (obsType === 'table' || obsType === 'meuble_bas' || obsType === 'etagere' || obsType === 'obstacle') {
+        effectiveMinY = this.floorY;
+        effectiveMaxY = (bounds.maxY || (obsData.worldY || 0)) + 0.05;
+      }
+      const inX = point.x > bounds.minX - fishRadius && point.x < bounds.maxX + fishRadius;
+      const inY = point.y > effectiveMinY - fishRadius && point.y < effectiveMaxY + fishRadius;
+      const inZ = point.z > bounds.minZ - fishRadius && point.z < bounds.maxZ + fishRadius;
+      if (inX && inY && inZ) return true;
+    }
+    return false;
+  },
+
+  // Vérifie si une position de spawn est à l'intérieur d'un obstacle (utilisé lors du spawn)
+  _isSpawnInsideObstacle: function (pos) {
+    if (!this.obstacles || this.obstacles.length === 0) return false;
+    const fishRadius = 0.05;
+    for (let i = 0; i < this.obstacles.length; i++) {
+      const obsData = this.obstacles[i].data || {};
+      const bounds = obsData.bounds;
+      if (!bounds) continue;
+      let effectiveMinY = bounds.minY !== undefined ? bounds.minY : (obsData.worldY || 0);
+      let effectiveMaxY = bounds.maxY !== undefined ? bounds.maxY : (obsData.worldY || 0);
+      const obsType = obsData.obstacleType || '';
+      if (obsType === 'table' || obsType === 'meuble_bas' || obsType === 'etagere' || obsType === 'obstacle') {
+        effectiveMinY = this.floorY;
+        effectiveMaxY = (bounds.maxY || (obsData.worldY || 0)) + 0.1;
+      }
+      const inX = pos.x > bounds.minX - fishRadius && pos.x < bounds.maxX + fishRadius;
+      const inY = pos.y > effectiveMinY - fishRadius && pos.y < effectiveMaxY + fishRadius;
+      const inZ = pos.z > bounds.minZ - fishRadius && pos.z < bounds.maxZ + fishRadius;
+      if (inX && inY && inZ) return true;
+    }
+    return false;
   },
 
   tick: function (time, delta) {
@@ -415,20 +549,20 @@ AFRAME.registerComponent('fish-movement', {
     // Vérifier les collisions avec les obstacles (tables, etc.)
     const obstacleHit = this._checkObstacleCollision(pos, nextPos);
 
-    // Si collision, choisir une nouvelle cible aléatoire pour éviter de rester coincé
+    // Si collision, choisir une nouvelle cible: privilégier une fuite dirigée loin de l'obstacle
     if (wallHit || obstacleHit) {
-      this._pickNewTarget();
+      if (obstacleHit && this._lastCollisionObstacle) {
+        // Si on a une information sur quel obstacle a été touché, fuir dans la direction opposée
+        this._escapeFromObstacle(this._lastCollisionObstacle, pos);
+      } else {
+        // Fallback: choix aléatoire
+        this._pickNewTarget();
+      }
 
       // Ajouter une perturbation un peu plus significative pour éviter que le poisson reste collé
       this.velocity.x += (Math.random() - 0.5) * 0.02;
       this.velocity.y += (Math.random() - 0.5) * 0.01;
       this.velocity.z += (Math.random() - 0.5) * 0.02;
-
-      // Appliquer une poussée dirigée vers la nouvelle cible pour pousser le poisson à s'éloigner du mur
-      try {
-        const push = this.target.clone().sub(pos).normalize().multiplyScalar(this.speed * 0.8);
-        this.velocity.add(push);
-      } catch (e) { /* ignore if target/pos invalid */ }
     }
 
     // Apply vertical bob before finalizing position
