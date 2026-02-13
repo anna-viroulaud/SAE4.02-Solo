@@ -30,6 +30,11 @@ AFRAME.registerComponent('fish-movement', {
 
     // Last obstacle collided (used to compute escape direction)
     this._lastCollisionObstacle = null;
+    
+    // Stuck detection: track position history to detect stuck fish
+    this._lastPositions = [];
+    this._stuckCheckInterval = 0;
+    this._stuckTeleportCount = 0;
 
     // Utiliser les données globales de la zone
     this.roomBounds = null;
@@ -460,6 +465,36 @@ AFRAME.registerComponent('fish-movement', {
     this._lastCollisionObstacle = null;
   },
 
+  // Téléporter le poisson vers une position sûre (au centre de la zone)
+  _teleportToSafePosition: function () {
+    if (!this.roomBounds || !isFinite(this.roomBounds.minX)) return;
+    
+    const pos = this.el.object3D.position;
+    const margin = 0.5;
+    
+    // Calculer le centre de la zone
+    const centerX = (this.roomBounds.minX + this.roomBounds.maxX) / 2;
+    const centerY = (this.floorY + this.ceilingY) / 2;
+    const centerZ = (this.roomBounds.minZ + this.roomBounds.maxZ) / 2;
+    
+    // Ajouter une variation aléatoire pour éviter que tous les poissons se téléportent au même endroit
+    const randX = (Math.random() - 0.5) * margin * 2;
+    const randY = (Math.random() - 0.5) * margin;
+    const randZ = (Math.random() - 0.5) * margin * 2;
+    
+    pos.set(centerX + randX, centerY + randY, centerZ + randZ);
+    
+    // Réinitialiser la vélocité avec une direction aléatoire
+    this.velocity.set(
+      (Math.random() - 0.5) * this.speed * 2,
+      (Math.random() - 0.5) * this.speed,
+      (Math.random() - 0.5) * this.speed * 2
+    );
+    
+    // Choisir une nouvelle cible
+    this._pickNewTarget();
+  },
+
   // Vérifie si un point est à l'intérieur d'un obstacle (utilisé pour choisir des targets)
   _isInsideObstacle: function (point) {
     if (!this.obstacles || this.obstacles.length === 0) return false;
@@ -571,7 +606,7 @@ AFRAME.registerComponent('fish-movement', {
     // Appliquer la position finale
     pos.copy(nextPos);
 
-    // SÉCURITÉ FINALE: Forcer le poisson à rester strictement dans les bounds
+    // SECURĘTIĘ FINALE: Forcer le poisson à rester strictement dans les bounds
     if (this.roomBounds && isFinite(this.roomBounds.minX)) {
       const safeMar = 0.1;
       if (pos.x < this.roomBounds.minX + safeMar) {
@@ -597,6 +632,31 @@ AFRAME.registerComponent('fish-movement', {
       if (pos.z > this.roomBounds.maxZ - safeMar) {
         pos.z = this.roomBounds.maxZ - safeMar;
         this.velocity.z = -Math.abs(this.velocity.z);
+      }
+    }
+
+    // Détection de poisson coincé: vérifier si le poisson bouge très peu
+    this._stuckCheckInterval += dt;
+    if (this._stuckCheckInterval > 0.5) { // Vérifier toutes les 0.5 secondes
+      this._stuckCheckInterval = 0;
+      
+      // Ajouter la position actuelle à l'historique
+      this._lastPositions.push(pos.clone());
+      if (this._lastPositions.length > 6) this._lastPositions.shift(); // Garder 3 secondes d'historique
+      
+      // Si on a assez d'historique, vérifier si le poisson est coincé
+      if (this._lastPositions.length >= 6) {
+        const first = this._lastPositions[0];
+        const last = this._lastPositions[this._lastPositions.length - 1];
+        const totalMovement = first.distanceTo(last);
+        
+        // Si le poisson a bougé de moins de 0.1m en 3 secondes, il est coincé
+        if (totalMovement < 0.1) {
+          console.warn('🐟 Poisson coincé détecté! Téléportation vers le centre...');
+          this._teleportToSafePosition();
+          this._lastPositions = []; // Reset l'historique
+          this._stuckTeleportCount++;
+        }
       }
     }
 

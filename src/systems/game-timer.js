@@ -112,6 +112,11 @@
     },
 
     showEndGameScreen: function () {
+      // Save score to localStorage (seulement si score > 0 ou partie jouée)
+      if (totalScore !== 0 || caughtFishes.length > 0) {
+        this.saveScore(totalScore);
+      }
+      
       // hide timers and bonus
       const timer3D = document.querySelector('#timer-3d'); if (timer3D) timer3D.setAttribute('visible', 'false');
       const bonusFish = document.querySelector('#bonus-fish'); if (bonusFish) bonusFish.setAttribute('visible', 'false');
@@ -122,6 +127,95 @@
 
       // show HTML end screen
       const endGameScreen = document.getElementById('end-game-screen'); if (endGameScreen) { this.populateScoreTable(); endGameScreen.style.display = 'flex'; }
+    },
+
+    saveScore: function (score) {
+      try {
+        // Récupérer les scores existants
+        let scores = this.getHighScores();
+        
+        // Vérifier si ce score existe déjà (éviter les doublons de même valeur)
+        const alreadyExists = scores.some(s => s.score === score);
+        
+        if (alreadyExists) {
+          console.log('💾 Score', score, 'already in top 3, not adding duplicate');
+          return;
+        }
+        
+        // Créer le nouveau score
+        const newScore = {
+          score: score,
+          date: new Date().toLocaleString('fr-FR'),
+          timestamp: Date.now()
+        };
+        
+        // Ajouter le nouveau score
+        scores.push(newScore);
+        
+        // Trier par score décroissant
+        scores.sort((a, b) => b.score - a.score);
+        
+        // Garder seulement les 3 meilleurs scores (avec valeurs différentes)
+        const uniqueScores = [];
+        const seenValues = new Set();
+        for (const s of scores) {
+          if (!seenValues.has(s.score)) {
+            seenValues.add(s.score);
+            uniqueScores.push(s);
+            if (uniqueScores.length >= 3) break;
+          }
+        }
+        
+        // Sauvegarder
+        localStorage.setItem('spearfisher-high-scores', JSON.stringify(uniqueScores));
+        console.log('💾 Score saved:', score, '| Top 3:', uniqueScores.map(s => s.score).join(', '));
+      } catch (e) {
+        console.warn('Failed to save score:', e);
+      }
+    },
+
+    getHighScores: function () {
+      try {
+        const stored = localStorage.getItem('spearfisher-high-scores');
+        if (!stored) return [];
+        
+        const parsed = JSON.parse(stored);
+        
+        // Vérifier que c'est un tableau valide
+        if (!Array.isArray(parsed)) {
+          console.warn('High scores data corrupted, resetting...');
+          localStorage.removeItem('spearfisher-high-scores');
+          return [];
+        }
+        
+        // Filtrer les scores valides et les trier
+        const validScores = parsed.filter(s => 
+          s && 
+          typeof s.score === 'number' && 
+          !isNaN(s.score) &&
+          s.date
+        );
+        
+        // Trier par score décroissant
+        validScores.sort((a, b) => b.score - a.score);
+        
+        // Garder seulement les scores avec des valeurs DIFFÉRENTES (pas de doublons)
+        const uniqueScores = [];
+        const seenValues = new Set();
+        for (const s of validScores) {
+          if (!seenValues.has(s.score)) {
+            seenValues.add(s.score);
+            uniqueScores.push(s);
+            if (uniqueScores.length >= 3) break;
+          }
+        }
+        
+        return uniqueScores;
+      } catch (e) {
+        console.warn('Error reading high scores, resetting:', e);
+        localStorage.removeItem('spearfisher-high-scores');
+        return [];
+      }
     },
 
     populateScoreTable: function () {
@@ -178,7 +272,19 @@
 
     isGameActive: function () { return gameActive; },
     getCaughtFishes: function () { return caughtFishes; },
-    getTotalScore: function () { return totalScore; }
+    getTotalScore: function () { return totalScore; },
+    
+    // Fonction pour effacer tous les scores (utile si scores corrompus)
+    clearHighScores: function () {
+      try {
+        localStorage.removeItem('spearfisher-high-scores');
+        console.log('🗑️ High scores cleared');
+        return true;
+      } catch (e) {
+        console.warn('Failed to clear high scores:', e);
+        return false;
+      }
+    }
   };
 
   console.log('✅ Game timer system loaded');

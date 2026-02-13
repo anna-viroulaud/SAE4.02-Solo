@@ -1303,6 +1303,26 @@ AFRAME.registerComponent('room-detection', {
         // Create invisible static-body volumes for detected tables and walls
         try { this._createStaticTableBodies(); } catch(e) { /* ignore */ }
         try { this._createPhysicsColliders(); } catch(e) { console.error('Erreur création colliders:', e); }
+        
+        // Réinitialiser la vélocité de l'arme pour éviter qu'elle s'envole
+        setTimeout(() => {
+          try {
+            const spear = document.querySelector('#spear');
+            if (spear && spear.body) {
+              if (spear.body.velocity && typeof spear.body.velocity.set === 'function') {
+                spear.body.velocity.set(0, 0, 0);
+              }
+              if (spear.body.angularVelocity && typeof spear.body.angularVelocity.set === 'function') {
+                spear.body.angularVelocity.set(0, 0, 0);
+              }
+              // Mettre le body en sleep pour éviter tout mouvement initial
+              if (typeof spear.body.sleep === 'function') {
+                spear.body.sleep();
+              }
+            }
+          } catch(e) { console.warn('Could not reset spear velocity:', e); }
+        }, 100);
+        
         window.FISH_ZONE.obstacles = this.obstaclePlanes || [];
         window.FISH_ZONE.wallPlanes = this.wallPlanes || [];
       } catch (e) { /* ignore */ }

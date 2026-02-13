@@ -536,6 +536,37 @@ AFRAME.registerComponent('grab-manager', {
 
     const THREE = AFRAME.THREE;
 
+    // Vérifier que l'arme est toujours kinematic (empêche les fuites)
+    try {
+      if (this.grabbedSpear.body) {
+        // S'assurer que le body reste kinematic pendant qu'on tient l'arme
+        if (this.grabbedSpear.body.type !== 2) { // 2 = KINEMATIC in CANNON.js
+          this.grabbedSpear.body.type = 2;
+          this.grabbedSpear.body.mass = 0;
+          this.grabbedSpear.body.updateMassProperties();
+        }
+        // Réinitialiser la vélocité pour éviter les dérives
+        if (this.grabbedSpear.body.velocity) {
+          if (typeof this.grabbedSpear.body.velocity.set === 'function') {
+            this.grabbedSpear.body.velocity.set(0, 0, 0);
+          } else {
+            this.grabbedSpear.body.velocity.x = 0;
+            this.grabbedSpear.body.velocity.y = 0;
+            this.grabbedSpear.body.velocity.z = 0;
+          }
+        }
+        if (this.grabbedSpear.body.angularVelocity) {
+          if (typeof this.grabbedSpear.body.angularVelocity.set === 'function') {
+            this.grabbedSpear.body.angularVelocity.set(0, 0, 0);
+          } else {
+            this.grabbedSpear.body.angularVelocity.x = 0;
+            this.grabbedSpear.body.angularVelocity.y = 0;
+            this.grabbedSpear.body.angularVelocity.z = 0;
+          }
+        }
+      }
+    } catch (e) { /* ignore */ }
+
     // Get hand world position and rotation
     const handPos = new THREE.Vector3();
     const handQuat = new THREE.Quaternion();

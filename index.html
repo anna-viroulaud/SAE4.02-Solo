@@ -24,11 +24,30 @@
   <script src="src/components/fish-spawner.js"></script>
   <script src="src/components/room-detection.js"></script>
   <script src="src/systems/game-timer.js"></script>
+  <script src="src/systems/game-manager.js"></script>
 </head>
 
 <body>
   <!-- Chronomètre en jeu (HTML overlay pour PC) -->
   <div id="timer-display" style="display:none;">1:00</div>
+  
+  <!-- Bouton High Scores -->
+  <button id="high-scores-btn" class="high-scores-button">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="white"/>
+    </svg>
+    <span>Find here your<br>high score history</span>
+  </button>
+
+  <!-- Panneau des meilleurs scores -->
+  <div id="high-scores-panel" class="high-scores-panel">
+    <div class="high-scores-container">
+      <button class="close-btn" id="close-high-scores">✕</button>
+      <h2>🏆 Voici vos 3 meilleures sessions</h2>
+      <div id="high-scores-list" class="scores-list"></div>
+    </div>
+  </div>
+  
   <!-- Bouton pour entrer en mode AR -->
   <div id="ar-overlay">
     <button id="ar-button">Enter AR 🥽</button>
@@ -103,6 +122,34 @@
           <a-box class="clickable" color="#3498db" width="0.45" height="0.12" depth="0.03">
             <a-text value="▶ PLAY" align="center" anchor="center" baseline="center" color="#ffffff" width="1.2" position="0 0 0.02"></a-text>
           </a-box>
+        </a-entity>
+
+        <!-- High Scores button for VR (3D) - hidden until room scan completes -->
+        <a-entity id="high-scores-btn-3d" class="clickable" position="0 -0.25 -0.7" visible="false">
+          <a-box class="clickable" color="#4a90e2" width="0.55" height="0.1" depth="0.03">
+            <a-text value="🏆 HIGH SCORES" align="center" anchor="center" baseline="center" color="#ffffff" width="1.2" position="0 0 0.02"></a-text>
+          </a-box>
+        </a-entity>
+
+        <!-- High Scores Panel 3D (visible when clicking the button) -->
+        <a-entity id="high-scores-panel-3d" position="0 0 -1.0" visible="false">
+          <!-- Fond du panneau -->
+          <a-plane color="#16213e" opacity="0.95" width="0.9" height="0.8" position="0 0 -0.02" material="shader: flat"></a-plane>
+          <!-- Bordure bleue -->
+          <a-box color="#4a90e2" width="0.9" height="0.02" depth="0.01" position="0 0.4 0"></a-box>
+          <a-box color="#4a90e2" width="0.9" height="0.02" depth="0.01" position="0 -0.4 0"></a-box>
+          <a-box color="#4a90e2" width="0.02" height="0.8" depth="0.01" position="-0.45 0 0"></a-box>
+          <a-box color="#4a90e2" width="0.02" height="0.8" depth="0.01" position="0.45 0 0"></a-box>
+          <!-- Titre -->
+          <a-text value="🏆 Vos 3 meilleures sessions" align="center" color="#4a90e2" width="1.5" position="0 0.32 0.01"></a-text>
+          <!-- Liste des scores (remplie dynamiquement) -->
+          <a-entity id="high-scores-list-3d" position="0 0.05 0.01"></a-entity>
+          <!-- Bouton fermer -->
+          <a-entity id="close-high-scores-3d" class="clickable" position="0 -0.3 0.01">
+            <a-box class="clickable" color="#e74c3c" width="0.25" height="0.08" depth="0.02">
+              <a-text value="FERMER" align="center" anchor="center" baseline="center" color="#ffffff" width="1" position="0 0 0.015"></a-text>
+            </a-box>
+          </a-entity>
         </a-entity>
 
         <!-- Reset spear buttons removed -->
