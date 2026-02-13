@@ -231,7 +231,9 @@ AFRAME.registerComponent('room-detection', {
     box.setAttribute('width', width);
     box.setAttribute('height', height);
     box.setAttribute('depth', depth);
-    box.setAttribute('material', 'color: #ff0000; opacity: 0.12; transparent: true; wireframe: true; side: double');
+    box.setAttribute('material', 'color: #ff0000; opacity: 0; transparent: true; wireframe: true; side: double');
+    box.setAttribute('visible', 'false'); // Zone rouge masquée
+    box.classList.add('room-boundary');
     box.setAttribute('geometry', 'primitive: box');
     
     console.log('📦 ZONE ROUGE créée avec rotation du sol :');
@@ -353,7 +355,9 @@ AFRAME.registerComponent('room-detection', {
     box.setAttribute('width', width);
     box.setAttribute('height', data.height);
     box.setAttribute('depth', depth);
-    box.setAttribute('material', 'color: #ff0000; opacity: 0.12; transparent: true; wireframe: true; side: double');
+    box.setAttribute('material', 'color: #ff0000; opacity: 0; transparent: true; wireframe: true; side: double');
+    box.setAttribute('visible', 'false'); // Zone rouge masquée
+    box.classList.add('room-boundary');
     box.setAttribute('geometry', 'primitive: box');
     
     console.log('📦 ZONE ROUGE créée (bounds du sol) :');
@@ -1296,8 +1300,9 @@ AFRAME.registerComponent('room-detection', {
       window.FISH_ZONE.scanned = true;
       // Exposer aussi les obstacles et murs détectés pour les spawners
       try {
-        // Before exposing obstacles, create invisible static-body volumes for detected tables
+        // Create invisible static-body volumes for detected tables and walls
         try { this._createStaticTableBodies(); } catch(e) { /* ignore */ }
+        try { this._createPhysicsColliders(); } catch(e) { console.error('Erreur création colliders:', e); }
         window.FISH_ZONE.obstacles = this.obstaclePlanes || [];
         window.FISH_ZONE.wallPlanes = this.wallPlanes || [];
       } catch (e) { /* ignore */ }
@@ -1359,6 +1364,279 @@ AFRAME.registerComponent('room-detection', {
     };
 
     fade();
+  },
+
+  _createPhysicsColliders: function () {
+    // Créer des colliders physiques pour CHAQUE plan détecté par le casque
+    const scene = this.el.sceneEl;
+    
+    console.log('🧱 Création des colliders physiques basés sur les VRAIS plans détectés:');
+    console.log(`   - ${this.wallPlanes.length} murs`);
+    console.log(`   - ${this.floorPlanes.length} sols`);
+    console.log(`   - ${this.ceilingPlanes.length} plafonds`);
+    
+    let colliderCount = 0;
+    
+    // Délai pour s'assurer que physics-system est prêt
+    setTimeout(() => {
+      // 1. Créer les colliders pour les MURS (bleus)
+      this.wallPlanes.forEach(({ plane, data }, idx) => {
+        try {
+          const collider = this._createPlaneCollider(data, 'wall', idx);
+          if (collider) {
+            collider.setAttribute('visible', 'false'); // Invisible
+            scene.appendChild(collider);
+            colliderCount++;
+          }
+        } catch (e) {
+          console.warn(`Erreur création collider mur ${idx}:`, e);
+        }
+      });
+      
+      // 2. Créer les colliders pour le SOL (vert)
+      this.floorPlanes.forEach(({ plane, data }, idx) => {
+        try {
+          const collider = this._createPlaneCollider(data, 'floor', idx);
+          if (collider) {
+            collider.setAttribute('visible', 'false'); // Invisible
+            scene.appendChild(collider);
+            colliderCount++;
+          }
+        } catch (e) {
+          console.warn(`Erreur création collider sol ${idx}:`, e);
+        }
+      });
+      
+      // 3. Créer les colliders pour le PLAFOND (jaune)
+      this.ceilingPlanes.forEach(({ plane, data }, idx) => {
+        try {
+          const collider = this._createPlaneCollider(data, 'ceiling', idx);
+          if (collider) {
+            collider.setAttribute('visible', 'false'); // Invisible
+            scene.appendChild(collider);
+            colliderCount++;
+          }
+        } catch (e) {
+          console.warn(`Erreur création collider plafond ${idx}:`, e);
+        }
+      });
+      
+      console.log(`✅ ${colliderCount} colliders physiques créés sur les plans détectés`);
+    }, 500);
+  },
+  
+  _createPlaneCollider: function (planeData, type, idx) {
+    // Créer un collider box orienté pour un plan détecté
+    if (!planeData || !planeData.pose || !planeData.polygon) return null;
+    
+    const polygon = planeData.polygon;
+    const pose = planeData.pose;
+    
+    // Calculer les dimensions du plan dans son espace local
+    let minX = Infinity, maxX = -Infinity;
+    let minZ = Infinity, maxZ = -Infinity;
+    
+    polygon.forEach(v => {
+      minX = Math.min(minX, v.x);
+      maxX = Math.max(maxX, v.x);
+      minZ = Math.min(minZ, v.z);
+      maxZ = Math.max(maxZ, v.z);
+    });
+    
+    const width = maxX - minX;
+    const depth = maxZ - minZ;
+    const centerX = (minX + maxX) / 2;
+    const centerZ = (minZ + maxZ) / 2;
+    
+    // Transformer le centre en coordonnées monde
+    const matrix = new THREE.Matrix4();
+    matrix.fromArray(pose.transform.matrix);
+    const centerLocal = new THREE.Vector3(centerX, 0, centerZ);
+    centerLocal.applyMatrix4(matrix);
+    
+    // Extraire rotation
+    const quaternion = new THREE.Quaternion();
+    const position = new THREE.Vector3();
+    const scale = new THREE.Vector3();
+    matrix.decompose(position, quaternion, scale);
+    
+    const euler = new THREE.Euler();
+    euler.setFromQuaternion(quaternion);
+    const rotationY = THREE.MathUtils.radToDeg(euler.y);
+    const rotationX = THREE.MathUtils.radToDeg(euler.x);
+    const rotationZ = THREE.MathUtils.radToDeg(euler.z);
+    
+    // Créer l'entité A-Frame avec collider
+    const box = document.createElement('a-box');
+    box.setAttribute('id', `physics-collider-${type}-${idx}`);
+    
+    // Récupérer la hauteur de la pièce depuis window.FISH_ZONE
+    let roomHeight = 2.5;
+    let floorY = 0;
+    try {
+      if (window.FISH_ZONE && window.FISH_ZONE.floorY !== undefined) {
+        floorY = window.FISH_ZONE.floorY;
+      }
+      if (window.FISH_ZONE && window.FISH_ZONE.ceilingY !== undefined) {
+        roomHeight = window.FISH_ZONE.ceilingY - floorY;
+      }
+    } catch(e) {}
+    
+    // Dimensions selon le type de plan
+    if (type === 'wall') {
+      // Mur vertical : positionner au centre de la hauteur de la pièce
+      const wallCenterY = floorY + (roomHeight / 2);
+      box.setAttribute('position', `${centerLocal.x} ${wallCenterY} ${centerLocal.z}`);
+      box.setAttribute('rotation', `${rotationX} ${rotationY} ${rotationZ}`);
+      
+      // Dimensions du mur
+      box.setAttribute('width', Math.max(width, depth, 0.2)); // Largeur = plus grande dimension
+      box.setAttribute('height', roomHeight); // Hauteur = hauteur de la pièce
+      box.setAttribute('depth', 0.3); // Épaisseur augmentée pour meilleure détection
+      
+      // Rendre visible pour debug (couleur bleue transparente)
+      box.setAttribute('material', 'color: #0088ff; opacity: 0.3; transparent: true; wireframe: true');
+      box.setAttribute('visible', 'true');
+    } else if (type === 'floor' || type === 'ceiling') {
+      // Sol/plafond horizontal : position normale
+      box.setAttribute('position', `${centerLocal.x} ${centerLocal.y} ${centerLocal.z}`);
+      box.setAttribute('rotation', `0 ${rotationY} 0`);
+      
+      // Dimensions horizontales
+      box.setAttribute('width', Math.max(width, 0.1));
+      box.setAttribute('height', 0.2); // Épaisseur
+      box.setAttribute('depth', Math.max(depth, 0.1));
+      
+      // Invisible
+      box.setAttribute('visible', 'false');
+    }
+    
+    box.setAttribute('static-body', 'shape: box');
+    box.classList.add('room-boundary');
+    box.setAttribute('data-collider-type', type);
+    
+    return box;
+  },
+
+  _createStaticWallBodies: function (roomData) {
+    // Create invisible physics walls for the room boundaries
+    const scene = this.el.sceneEl;
+    const height = roomData.height || 2.5;
+    const floorY = roomData.floorY || 0;
+    const centerY = floorY + height / 2;
+    
+    // Use the spawn-zone-bounds dimensions as the room boundaries
+    const bounds = roomData.bounds;
+    if (!bounds) {
+      console.warn('⚠️ Pas de bounds disponibles pour créer les murs physiques');
+      return;
+    }
+    
+    const minX = bounds.minX;
+    const maxX = bounds.maxX;
+    const minZ = bounds.minZ;
+    const maxZ = bounds.maxZ;
+    const width = maxX - minX;
+    const depth = maxZ - minZ;
+    const centerX = (minX + maxX) / 2;
+    const centerZ = (minZ + maxZ) / 2;
+    
+    console.log('🧱 Création des murs physiques:');
+    console.log(`   Bounds: X[${minX.toFixed(2)}, ${maxX.toFixed(2)}] Z[${minZ.toFixed(2)}, ${maxZ.toFixed(2)}]`);
+    console.log(`   Centre: (${centerX.toFixed(2)}, ${centerY.toFixed(2)}, ${centerZ.toFixed(2)})`);
+    console.log(`   Dimensions: ${width.toFixed(2)}m x ${height.toFixed(2)}m x ${depth.toFixed(2)}m`);
+    
+    // Wall thickness
+    const wallThickness = 0.2; // Augmenté de 0.1 à 0.2 pour meilleure détection
+    
+    // Créer les murs avec un délai pour s'assurer que physics-system est prêt
+    setTimeout(() => {
+      // North wall (max Z)
+      const northWall = document.createElement('a-box');
+      northWall.setAttribute('id', 'physics-wall-north');
+      northWall.setAttribute('position', `${centerX} ${centerY} ${maxZ + wallThickness/2}`);
+      northWall.setAttribute('width', width);
+      northWall.setAttribute('height', height);
+      northWall.setAttribute('depth', wallThickness);
+      northWall.setAttribute('static-body', 'shape: box');
+      northWall.setAttribute('material', 'color: #0000ff; opacity: 0.3; transparent: true; wireframe: true');
+      northWall.setAttribute('visible', 'true'); // Visible pour debug
+      northWall.classList.add('room-boundary');
+      scene.appendChild(northWall);
+      console.log('   ✅ Mur Nord créé');
+      
+      // South wall (min Z)
+      const southWall = document.createElement('a-box');
+      southWall.setAttribute('id', 'physics-wall-south');
+      southWall.setAttribute('position', `${centerX} ${centerY} ${minZ - wallThickness/2}`);
+      southWall.setAttribute('width', width);
+      southWall.setAttribute('height', height);
+      southWall.setAttribute('depth', wallThickness);
+      southWall.setAttribute('static-body', 'shape: box');
+      southWall.setAttribute('material', 'color: #0000ff; opacity: 0.3; transparent: true; wireframe: true');
+      southWall.setAttribute('visible', 'true'); // Visible pour debug
+      southWall.classList.add('room-boundary');
+      scene.appendChild(southWall);
+      console.log('   ✅ Mur Sud créé');
+      
+      // East wall (max X)
+      const eastWall = document.createElement('a-box');
+      eastWall.setAttribute('id', 'physics-wall-east');
+      eastWall.setAttribute('position', `${maxX + wallThickness/2} ${centerY} ${centerZ}`);
+      eastWall.setAttribute('width', wallThickness);
+      eastWall.setAttribute('height', height);
+      eastWall.setAttribute('depth', depth);
+      eastWall.setAttribute('static-body', 'shape: box');
+      eastWall.setAttribute('material', 'color: #0000ff; opacity: 0.3; transparent: true; wireframe: true');
+      eastWall.setAttribute('visible', 'true'); // Visible pour debug
+      eastWall.classList.add('room-boundary');
+      scene.appendChild(eastWall);
+      console.log('   ✅ Mur Est créé');
+      
+      // West wall (min X)
+      const westWall = document.createElement('a-box');
+      westWall.setAttribute('id', 'physics-wall-west');
+      westWall.setAttribute('position', `${minX - wallThickness/2} ${centerY} ${centerZ}`);
+      westWall.setAttribute('width', wallThickness);
+      westWall.setAttribute('height', height);
+      westWall.setAttribute('depth', depth);
+      westWall.setAttribute('static-body', 'shape: box');
+      westWall.setAttribute('material', 'color: #0000ff; opacity: 0.3; transparent: true; wireframe: true');
+      westWall.setAttribute('visible', 'true'); // Visible pour debug
+      westWall.classList.add('room-boundary');
+      scene.appendChild(westWall);
+      console.log('   ✅ Mur Ouest créé');
+      
+      // Floor
+      const floor = document.createElement('a-box');
+      floor.setAttribute('id', 'physics-floor');
+      floor.setAttribute('position', `${centerX} ${floorY - wallThickness/2} ${centerZ}`);
+      floor.setAttribute('width', width);
+      floor.setAttribute('height', wallThickness);
+      floor.setAttribute('depth', depth);
+      floor.setAttribute('static-body', 'shape: box');
+      floor.setAttribute('material', 'color: #00ff00; opacity: 0.2; transparent: true; wireframe: true');
+      floor.setAttribute('visible', 'true'); // Visible pour debug
+      floor.classList.add('room-boundary');
+      scene.appendChild(floor);
+      console.log('   ✅ Sol créé');
+      
+      // Ceiling
+      const ceiling = document.createElement('a-box');
+      ceiling.setAttribute('id', 'physics-ceiling');
+      ceiling.setAttribute('position', `${centerX} ${floorY + height + wallThickness/2} ${centerZ}`);
+      ceiling.setAttribute('width', width);
+      ceiling.setAttribute('height', wallThickness);
+      ceiling.setAttribute('depth', depth);
+      ceiling.setAttribute('static-body', 'shape: box');
+      ceiling.setAttribute('material', 'color: #ffff00; opacity: 0.2; transparent: true; wireframe: true');
+      ceiling.setAttribute('visible', 'true'); // Visible pour debug
+      ceiling.classList.add('room-boundary');
+      scene.appendChild(ceiling);
+      console.log('   ✅ Plafond créé');
+      
+      console.log('🧱 Tous les murs physiques créés (VISIBLES pour debug)');
+    }, 500); // Délai de 500ms pour s'assurer que physics-system est prêt
   },
 
   _createStaticTableBodies: function () {

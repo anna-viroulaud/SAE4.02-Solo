@@ -270,6 +270,8 @@ AFRAME.registerComponent('grab-manager', {
                   }
                 } catch (e) { /* ignore */ }
               }
+              // Enforce spawn-zone bounds each tether tick
+              try { if (this.enforceEntityInsideSpawnZone) this.enforceEntityInsideSpawnZone(el); } catch(e) {}
 
               if (now - tetherStart < tetherDur) requestAnimationFrame(tetherStep);
             };
@@ -366,6 +368,8 @@ AFRAME.registerComponent('grab-manager', {
                       }
                     }
                   } catch(e) {}
+                  // Enforce spawn-zone bounds during scripted tether
+                  try { if (this.enforceEntityInsideSpawnZone) this.enforceEntityInsideSpawnZone(el); } catch(e) {}
                 }
                 if (now - tetherStart < tetherDur) requestAnimationFrame(tetherStep);
               };
@@ -399,14 +403,16 @@ AFRAME.registerComponent('grab-manager', {
     const step = (now) => {
       const t = Math.min(1, (now - startTime) / duration);
       const currentPos = startPos.clone().lerp(targetPos, t);
+      // Clamp scripted launch to spawn zone
+      const clampedPos = (this.clampToSpawnZone) ? this.clampToSpawnZone(currentPos) : currentPos;
 
       // set world position respecting parent transform
       const parentObj = el.object3D.parent;
       if (parentObj) {
-        const localPos = parentObj.worldToLocal(currentPos.clone());
+        const localPos = parentObj.worldToLocal(clampedPos.clone());
         el.object3D.position.copy(localPos);
       } else {
-        el.object3D.position.copy(currentPos);
+        el.object3D.position.copy(clampedPos);
       }
 
       // compute spear tip and check collision
@@ -455,6 +461,76 @@ AFRAME.registerComponent('grab-manager', {
     requestAnimationFrame(step);
   },
 
+  // Clamp a world position inside the spawn-zone bounding box if present.
+  // Returns a new Vector3 (clamped world position) or the original if no box.
+  clampToSpawnZone: function (worldPos) {
+    const THREE = AFRAME.THREE;
+    try {
+      const boxEl = document.querySelector('#spawn-zone-bounds');
+      if (!boxEl || !boxEl.object3D) return worldPos;
+
+      // Ensure matrixWorld is up to date
+      boxEl.object3D.updateMatrixWorld(true);
+
+      // Transform world pos into box local space
+      const inv = new THREE.Matrix4().copy(boxEl.object3D.matrixWorld).invert();
+      const local = worldPos.clone().applyMatrix4(inv);
+
+      // Read box dimensions (A-Frame stores them as attributes on a-box)
+      const width = parseFloat(boxEl.getAttribute('width')) || (boxEl.object3D.scale.x || 1);
+      const height = parseFloat(boxEl.getAttribute('height')) || (boxEl.object3D.scale.y || 1);
+      const depth = parseFloat(boxEl.getAttribute('depth')) || (boxEl.object3D.scale.z || 1);
+      const halfW = width / 2; const halfH = height / 2; const halfD = depth / 2;
+
+      // Clamp in local box space
+      local.x = Math.max(-halfW, Math.min(halfW, local.x));
+      local.y = Math.max(-halfH, Math.min(halfH, local.y));
+      local.z = Math.max(-halfD, Math.min(halfD, local.z));
+
+      // Transform back to world
+      const clampedWorld = local.applyMatrix4(boxEl.object3D.matrixWorld);
+      return clampedWorld;
+    } catch (e) { return worldPos; }
+  },
+
+  // Ensure an entity stays inside the spawn zone: move its object3D or physics body to the clamped position.
+  enforceEntityInsideSpawnZone: function (el) {
+    if (!el) return;
+    const THREE = AFRAME.THREE;
+    try {
+      const worldPos = new THREE.Vector3();
+      el.object3D.getWorldPosition(worldPos);
+      const clamped = this.clampToSpawnZone(worldPos);
+      // If unchanged, nothing to do
+      if (clamped.distanceTo(worldPos) < 0.001) return;
+
+      // Apply clamped position: prefer physics body if present
+      if (el.body) {
+        try {
+          if (el.body.position && typeof el.body.position.set === 'function') {
+            el.body.position.set(clamped.x, clamped.y, clamped.z);
+          } else if (el.body.position) {
+            el.body.position.x = clamped.x; el.body.position.y = clamped.y; el.body.position.z = clamped.z;
+          }
+          // zero velocity to avoid re-exit
+          if (el.body.velocity && typeof el.body.velocity.set === 'function') el.body.velocity.set(0,0,0);
+          else if (el.body.velocity) { el.body.velocity.x = 0; el.body.velocity.y = 0; el.body.velocity.z = 0; }
+        } catch (e) { /* ignore physics set errors */ }
+      }
+
+      // fallback to set object3D position
+      try {
+        const parent = el.object3D.parent;
+        if (parent) {
+          const local = parent.worldToLocal(clamped.clone());
+          el.object3D.position.copy(local);
+        } else {
+          el.object3D.position.copy(clamped);
+        }
+      } catch (e) {}
+    } catch (e) {}
+  },
+
   tick: function () {
     if (!this.grabbedSpear || !this.grabbingHand) return;
 
@@ -493,6 +569,9 @@ AFRAME.registerComponent('grab-manager', {
     const offsetWorld = currentOffset.clone().applyQuaternion(handQuat);
     const targetPos = handPos.clone().add(offsetWorld);
 
+    // Clamp the target position to the spawn zone (prevents weapon leaving detection area)
+    const clampedTarget = this.clampToSpawnZone ? this.clampToSpawnZone(targetPos) : targetPos;
+
     // Compute desired rotation: base on hand then flip on Y
     const baseRotation = handQuat.clone();
     const flipY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
@@ -508,9 +587,9 @@ AFRAME.registerComponent('grab-manager', {
       if (spear.body) {
         // many physics engines expose position.set(x,y,z)
         if (spear.body.position && typeof spear.body.position.set === 'function') {
-          spear.body.position.set(targetPos.x, targetPos.y, targetPos.z);
+          spear.body.position.set(clampedTarget.x, clampedTarget.y, clampedTarget.z);
         } else if (spear.body.position) {
-          spear.body.position.x = targetPos.x; spear.body.position.y = targetPos.y; spear.body.position.z = targetPos.z;
+          spear.body.position.x = clampedTarget.x; spear.body.position.y = clampedTarget.y; spear.body.position.z = clampedTarget.z;
         }
 
         // quaternion may be different shape (CANNON has .set), try setting if available
@@ -520,12 +599,12 @@ AFRAME.registerComponent('grab-manager', {
           spear.body.quaternion.x = baseRotation.x; spear.body.quaternion.y = baseRotation.y; spear.body.quaternion.z = baseRotation.z; spear.body.quaternion.w = baseRotation.w;
         } else {
           // fallback to updating object3D
-          spear.object3D.position.copy(targetPos);
+          spear.object3D.position.copy(clampedTarget);
           spear.object3D.quaternion.copy(baseRotation);
         }
       } else {
         // No physics body: update object3D directly
-        spear.object3D.position.copy(targetPos);
+        spear.object3D.position.copy(clampedTarget);
         spear.object3D.quaternion.copy(baseRotation);
       }
     } catch (e) {

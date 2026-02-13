@@ -105,6 +105,8 @@
           </a-box>
         </a-entity>
 
+        <!-- Reset spear buttons removed -->
+
         <!-- Écran de fin de jeu en 3D (copie depuis la branche score-challenge) -->
         <a-entity id="end-screen-3d" position="0 0 -1.5" visible="false">
           <!-- Fond du panneau -->
@@ -156,8 +158,8 @@
         material="color: #ff0000; opacity: 0.3; transparent: true"
         gltf-model="#spear-model"
         scale="0.5 0.5 0.5"
-        dynamic-body="mass:1"
-        spear-bounce="restitution:0.72; minSpeed:0.12">
+        dynamic-body="mass:1; shape:sphere; sphereRadius:0.18"
+        spear-bounce="restitution:0.5; damping:0.7">
       </a-entity>
 
       <!-- Les poissons seront générés automatiquement par fish-spawner après le scan de la pièce -->
@@ -216,6 +218,7 @@
       });
     })();
   </script>
+  <!-- Reset spear handlers removed -->
 </body>
 
 </html>
