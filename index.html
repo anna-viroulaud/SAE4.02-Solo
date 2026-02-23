@@ -149,6 +149,13 @@
       <a-asset-item id="thon" src="assets/models/thon.glb"></a-asset-item>
       <a-asset-item id="thon_bleu" src="assets/models/thon_bleu.glb"></a-asset-item>
       <a-asset-item id="starfish" src="assets/models/Starfish.glb"></a-asset-item>
+      <!-- Environment decoration models -->
+      <a-asset-item id="coral-red" src="assets/models/Coral-red.glb"></a-asset-item>
+      <a-asset-item id="grass" src="assets/models/Grass.glb"></a-asset-item>
+      <a-asset-item id="rock" src="assets/models/Rock.glb"></a-asset-item>
+      <a-asset-item id="rocks" src="assets/models/Rocks.glb"></a-asset-item>
+      <a-asset-item id="vine" src="assets/models/Vine.glb"></a-asset-item>
+      <a-asset-item id="underwater-coral" src="assets/models/underwater_enviro_coral.glb"></a-asset-item>
     </a-assets>
 
     <!-- Ancre monde : tous les objets 3D sont enfants de cette entité pour rester fixes dans l'espace réel -->
@@ -280,8 +287,8 @@
     </a-entity>
 
     <!-- VR Hands with laser controls and raycasters to interact with 3D UI -->
-    <a-entity id="leftHand" hand-controls="hand: left; handModelStyle: lowPoly; color: #15ACCF" laser-controls="hand: left" raycaster="objects: .clickable"></a-entity>
-    <a-entity id="rightHand" hand-controls="hand: right; handModelStyle: lowPoly; color: #15ACCF" laser-controls="hand: right" raycaster="objects: .clickable"></a-entity>
+    <a-entity id="leftHand" hand-controls="hand: left; handModelStyle: lowPoly; color: #15ACCF" laser-controls="hand: left" raycaster="objects: .clickable" visible="true"></a-entity>
+    <a-entity id="rightHand" hand-controls="hand: right; handModelStyle: lowPoly; color: #15ACCF" laser-controls="hand: right" raycaster="objects: .clickable" visible="true"></a-entity>
 
     <!-- EFFET D'EAU QUI MONTE avec shader Three.js (positionnée dans le monde, pas au niveau de la caméra) -->
     <a-entity id="water-surface" position="0 0 -2" water-adapter>
