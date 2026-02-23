@@ -19,6 +19,18 @@
       caughtFishes = [];
       totalScore = 0;
 
+      // hide AR and High Scores buttons during game
+      const arOverlay = document.getElementById('ar-overlay');
+      if (arOverlay) arOverlay.style.display = 'none';
+      const highScoresBtn = document.getElementById('high-scores-btn');
+      if (highScoresBtn) {
+        highScoresBtn.style.display = 'none';
+        highScoresBtn.style.pointerEvents = 'none';
+      }
+      // hide High Scores panel if open
+      const highScoresPanel = document.getElementById('high-scores-panel');
+      if (highScoresPanel) highScoresPanel.style.display = 'none';
+
       // show HTML timer
       const timerDisplay = document.getElementById('timer-display');
       if (timerDisplay) timerDisplay.style.display = 'block';
@@ -122,6 +134,14 @@
       const bonusFish = document.querySelector('#bonus-fish'); if (bonusFish) bonusFish.setAttribute('visible', 'false');
       const scoreDisplay = document.querySelector('#score-display'); if (scoreDisplay) scoreDisplay.setAttribute('visible', 'false');
 
+      // hide AR button and High Scores button during end screen
+      const arOverlay = document.getElementById('ar-overlay'); if (arOverlay) arOverlay.style.display = 'none';
+      const highScoresBtn = document.getElementById('high-scores-btn'); 
+      if (highScoresBtn) { 
+        highScoresBtn.style.display = 'none'; 
+        highScoresBtn.style.pointerEvents = 'none'; 
+      }
+
       // show 3D end screen
       const endScreen3D = document.querySelector('#end-screen-3d'); if (endScreen3D) { endScreen3D.setAttribute('visible','true'); this.populateScoreTable3D(); }
 
@@ -221,9 +241,13 @@
     populateScoreTable: function () {
       const tableBody = document.getElementById('score-table-body'); if (!tableBody) return;
       tableBody.innerHTML = '';
-      if (caughtFishes.length === 0) {
+      console.log('📊 Populating score table - caughtFishes:', caughtFishes, 'length:', caughtFishes.length);
+      // Check if we have fish caught
+      if (!caughtFishes || caughtFishes.length === 0) {
+        console.log('⚠️ No fishes to display in table');
         const r = document.createElement('tr'); r.innerHTML = `<td colspan="3" style="text-align:center;color:#999;">😢 No fish caught...</td>`; tableBody.appendChild(r); return;
       }
+      console.log('✅ Displaying', caughtFishes.length, 'fishes in table');
       const groups = {};
       let calcTotal = 0;
       caughtFishes.forEach(f => {
@@ -241,7 +265,8 @@
     populateScoreTable3D: function () {
       const endScreen3D = document.querySelector('#end-screen-3d'); if (!endScreen3D) return;
       const old = document.querySelector('#dynamic-score-table-3d'); if (old) old.parentNode.removeChild(old);
-      if (caughtFishes.length === 0) {
+      // Check if we have fish caught
+      if (!caughtFishes || caughtFishes.length === 0) {
         const t = document.createElement('a-text'); t.setAttribute('id','score-list-3d'); t.setAttribute('value','No fish caught...'); t.setAttribute('align','center'); t.setAttribute('color','#999999'); t.setAttribute('width','1.8'); t.setAttribute('position','0 0 0'); endScreen3D.appendChild(t); return;
       }
       const tableContainer = document.createElement('a-entity'); tableContainer.setAttribute('id','dynamic-score-table-3d'); tableContainer.setAttribute('position','0 0.3 0.01');
@@ -267,6 +292,13 @@
       const scoreDisplayReset = document.querySelector('#score-display'); if (scoreDisplayReset) scoreDisplayReset.setAttribute('value','Fish: 0 | Points: 0');
       const grabManager = document.querySelector('[grab-manager]'); if (grabManager && grabManager.components && grabManager.components['grab-manager']) { grabManager.components['grab-manager'].fishCaught = 0; grabManager.components['grab-manager'].points = 0; }
       const fishTargets = document.querySelectorAll('.fish-target'); fishTargets.forEach(f => { delete f.dataset.caught; f.setAttribute('visible', 'false'); });
+      // show AR and High Scores buttons again when returning to menu
+      const arOverlay = document.getElementById('ar-overlay'); if (arOverlay) arOverlay.style.display = 'flex';
+      const highScoresBtn = document.getElementById('high-scores-btn'); 
+      if (highScoresBtn) { 
+        highScoresBtn.style.display = 'flex'; 
+        highScoresBtn.style.pointerEvents = 'auto'; 
+      }
       console.log('🔄 Game reset');
     },
 

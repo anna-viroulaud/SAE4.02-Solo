@@ -64,11 +64,16 @@
       start3D.addEventListener('click', () => {
         start3D.setAttribute('visible', 'false');
         
-        // Hide high scores button when game starts
+        // Hide high scores button and AR button when game starts
         const highScores3DBtn = document.querySelector('#high-scores-btn-3d');
         if (highScores3DBtn) highScores3DBtn.setAttribute('visible', 'false');
         const highScoresBtnHTML = document.getElementById('high-scores-btn');
-        if (highScoresBtnHTML) highScoresBtnHTML.style.display = 'none';
+        if (highScoresBtnHTML) {
+          highScoresBtnHTML.style.display = 'none';
+          highScoresBtnHTML.style.pointerEvents = 'none';
+        }
+        const arOverlay = document.getElementById('ar-overlay');
+        if (arOverlay) arOverlay.style.display = 'none';
         
         try {
           // 1) reveal the weapon
@@ -191,6 +196,16 @@
     
     if (highScoresBtn) {
       highScoresBtn.addEventListener('click', () => {
+        // Only open if game is not active and end screen is not shown
+        if (window.gameTimer && window.gameTimer.isGameActive && window.gameTimer.isGameActive()) {
+          console.log('Cannot open High Scores during game');
+          return;
+        }
+        const endGameScreen = document.getElementById('end-game-screen');
+        if (endGameScreen && endGameScreen.style.display === 'flex') {
+          console.log('Cannot open High Scores during end screen');
+          return;
+        }
         if (highScoresPanel) {
           highScoresPanel.style.display = 'flex';
           hideButtons();
@@ -255,6 +270,16 @@
     
     if (highScoresBtn3D) {
       highScoresBtn3D.addEventListener('click', () => {
+        // Only open if game is not active and end screen is not shown
+        if (window.gameTimer && window.gameTimer.isGameActive && window.gameTimer.isGameActive()) {
+          console.log('Cannot open High Scores 3D during game');
+          return;
+        }
+        const endScreen3D = document.querySelector('#end-screen-3d');
+        if (endScreen3D && endScreen3D.getAttribute('visible') === 'true') {
+          console.log('Cannot open High Scores 3D during end screen');
+          return;
+        }
         if (highScoresPanel3D) {
           highScoresPanel3D.setAttribute('visible', 'true');
           hideButtons();
