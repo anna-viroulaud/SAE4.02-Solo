@@ -21,6 +21,8 @@
   <script src="src/components/bubble-spawner.js"></script>
   <script src="src/components/fish-rotator.js"></script>
   <script src="src/components/coral-placer.js"></script>
+  <script src="src/components/panel-placer.js"></script>
+  <script src="src/components/look-at-camera.js"></script>
   <script src="src/components/fish-spawner.js"></script>
   <script src="src/components/room-detection.js"></script>
   <script src="src/systems/game-timer.js"></script>
@@ -156,16 +158,75 @@
       <a-asset-item id="rocks" src="assets/models/Rocks.glb"></a-asset-item>
       <a-asset-item id="vine" src="assets/models/Vine.glb"></a-asset-item>
       <a-asset-item id="underwater-coral" src="assets/models/underwater_enviro_coral.glb"></a-asset-item>
+      <!-- Sound effects -->
+      <audio id="spear-thrust-1" src="assets/son/yodguard-spear_thrust-1-382402.mp3" preload="auto"></audio>
+      <audio id="spear-thrust-2" src="assets/son/yodguard-spear_thrust-2-382404.mp3" preload="auto"></audio>
+      <audio id="spear-thrust-3" src="assets/son/yodguard-spear_thrust-3-382407.mp3" preload="auto"></audio>
+      <audio id="clock-ticking" src="assets/son/reddog0607-clock-ticking-365218.mp3" preload="auto"></audio>
+      <audio id="underwater-loop" src="assets/son/freesound_community-underwater-loop-amb-6182.mp3" preload="auto" loop></audio>
+      <audio id="win-sound-1" src="assets/son/floraphonic-you-win-sequence-1-183948.mp3" preload="auto"></audio>
+      <audio id="win-sound-2" src="assets/son/floraphonic-you-win-sequence-2-183949.mp3" preload="auto"></audio>
+      <audio id="button-press" src="assets/son/dragon-studio-button-press-382713.mp3" preload="auto"></audio>
+      <audio id="explosion" src="assets/son/daviddumaisaudio-large-underwater-explosion-190270.mp3" preload="auto"></audio>
+      <audio id="ocean-wave" src="assets/son/freesound_community-ocean-wave-100271.mp3" preload="auto"></audio>
     </a-assets>
 
     <!-- Ancre monde : tous les objets 3D sont enfants de cette entité pour rester fixes dans l'espace réel -->
     <a-entity id="world-anchor" fish-spawner="count: 12">
+
+      <!-- UI Panels in world space (not attached to camera) -->
+      <a-entity id="ui-panels-container" position="0 1.5 -2" visible="false" look-at-camera>
+        <!-- Bonus fish panel -->
+        <a-entity id="bonus-fish-world" position="-0.8 0.3 0" scale="0.8 0.8 0.8" visible="false">
+          <a-plane color="#1a1a1a" opacity="0.9" width="0.38" height="0.28" position="0 0 -0.015"></a-plane>
+          <a-box color="#FFD700" width="0.38" height="0.015" depth="0.01" position="0 0.14 0" material="metalness: 0.8; roughness: 0.2"></a-box>
+          <a-box color="#FFD700" width="0.38" height="0.015" depth="0.01" position="0 -0.14 0" material="metalness: 0.8; roughness: 0.2"></a-box>
+          <a-entity position="0 0 0.03">
+            <a-entity id="fish-3d-world" gltf-model="#goldfish" position="0.05 0.02 0" rotation="0 90 0" scale="0.004 0.004 0.004" fish-rotator="interval: 8000"></a-entity>
+            <a-text value="TARGET" align="center" color="#FFD700" width="0.8" position="0.02 -0.08 0.01" font="roboto"></a-text>
+          </a-entity>
+        </a-entity>
+
+        <!-- Score display -->
+        <a-text id="score-display-world" value="Fish: 0" position="-0.8 0.0 0" align="center" color="#FFD700" width="0.6" font="roboto" shader="msdf" visible="false"></a-text>
+
+        <!-- Timer -->
+        <a-entity id="timer-3d-world" position="0.8 0.3 0" scale="0.6 0.6 0.6" visible="false">
+          <a-plane color="#000000" opacity="0.8" width="0.25" height="0.12" position="0 0 -0.01"></a-plane>
+          <a-text id="timer-text-world" value="1:00" align="center" color="#FFD700" width="0.8" position="0 0 0"></a-text>
+        </a-entity>
+
+        <!-- Start button -->
+        <a-entity id="start-button-3d-world" class="clickable" position="0 -0.3 0" visible="false">
+          <a-box class="clickable" color="#3498db" width="0.45" height="0.12" depth="0.03">
+            <a-text value="▶ PLAY" align="center" anchor="center" baseline="center" color="#ffffff" width="1.2" position="0 0 0.02"></a-text>
+          </a-box>
+        </a-entity>
+
+        <!-- High scores button -->
+        <a-entity id="high-scores-btn-3d-world" class="clickable" position="0 -0.5 0" visible="false">
+          <a-box class="clickable" color="#4a90e2" width="0.55" height="0.1" depth="0.03">
+            <a-text value="🏆 HIGH SCORES" align="center" anchor="center" baseline="center" color="#ffffff" width="1.2" position="0 0 0.02"></a-text>
+          </a-box>
+        </a-entity>
+      </a-entity>
 
     <!-- Camera HUD: bonus target, score and 3D timer -->
     <a-entity id="cameraRig">
       <a-camera id="head" look-controls>
         <!-- Cursor for mouse (desktop) and gaze interactions -->
         <a-entity cursor="rayOrigin: mouse" raycaster="objects: .clickable" position="0 0 -1"></a-entity>
+        
+        <!-- Viseur de visée (crosshair) -->
+        <a-entity id="crosshair" position="0 0 -1.2">
+          <!-- Centre du viseur -->
+          <a-ring color="#00ff00" radius-inner="0.002" radius-outer="0.004" material="opacity: 0.8"></a-ring>
+          <!-- Lignes du viseur -->
+          <a-box color="#00ff00" width="0.015" height="0.002" depth="0.001" position="0 0.01 0" material="opacity: 0.7"></a-box>
+          <a-box color="#00ff00" width="0.015" height="0.002" depth="0.001" position="0 -0.01 0" material="opacity: 0.7"></a-box>
+          <a-box color="#00ff00" width="0.002" height="0.015" depth="0.001" position="0.01 0 0" material="opacity: 0.7"></a-box>
+          <a-box color="#00ff00" width="0.002" height="0.015" depth="0.001" position="-0.01 0 0" material="opacity: 0.7"></a-box>
+        </a-entity>
         
         <a-entity id="bonus-fish" position="-0.15 0.2 -0.7" scale="0.8 0.8 0.8" visible="false">
           <a-plane color="#1a1a1a" opacity="0.9" width="0.38" height="0.28" position="0 0 -0.015"></a-plane>
@@ -283,6 +344,9 @@
 
       <!-- Coral placer: place coral models on yellow visuals and on the floor after scan -->
       <a-entity id="coral-placer" coral-placer></a-entity>
+
+      <!-- Panel placer: optionally place UI panels on detected walls (disabled by default) -->
+      <a-entity id="panel-placer" panel-placer="enabled: false"></a-entity>
 
     </a-entity>
 

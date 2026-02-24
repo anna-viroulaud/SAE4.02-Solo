@@ -115,7 +115,7 @@ AFRAME.registerComponent('coral-placer', {
       console.log(`coral-placer: scattering ${numDecor} environment decorations on floor area ${floorArea.toFixed(2)}m²`);
       
       // Apply safety margin to prevent decorations from spawning too close to edges
-      const safetyMargin = 0.3;
+      const safetyMargin = 1; // Augmenté de 0.3 à 0.6 pour éviter que les coraux sortent de la room
       const safeMinX = minX + safetyMargin;
       const safeMaxX = maxX - safetyMargin;
       const safeMinZ = minZ + safetyMargin;

@@ -687,7 +687,7 @@ AFRAME.registerComponent('grab-manager', {
 
       // Determine current bonus fish shown in UI (if any)
       let bonusFishType = null;
-      const bonusFishEntity = document.querySelector('#fish-3d');
+      const bonusFishEntity = document.querySelector('#fish-3d-world') || document.querySelector('#fish-3d');
       if (bonusFishEntity) {
         const rot = bonusFishEntity.components && bonusFishEntity.components['fish-rotator'];
         if (rot && rot.getCurrentFish) bonusFishType = rot.getCurrentFish();
@@ -707,7 +707,7 @@ AFRAME.registerComponent('grab-manager', {
 
       // update visible score display
       try {
-        const scoreDisplay = document.querySelector('#score-display');
+        const scoreDisplay = document.querySelector('#score-display-world') || document.querySelector('#score-display');
         if (scoreDisplay && window.gameTimer) {
           const count = (window.gameTimer.getCaughtFishes && window.gameTimer.getCaughtFishes().length) || 0;
           const points = (window.gameTimer.getTotalScore && window.gameTimer.getTotalScore()) || 0;
@@ -719,6 +719,17 @@ AFRAME.registerComponent('grab-manager', {
       try {
         if (isCorrect && bonusFishEntity && bonusFishEntity.components && bonusFishEntity.components['fish-rotator'] && bonusFishEntity.components['fish-rotator'].nextFish) {
           bonusFishEntity.components['fish-rotator'].nextFish();
+        }
+      } catch (e) {}
+
+      // Play spear thrust sound (random from 3 sounds)
+      try {
+        const soundIndex = Math.floor(Math.random() * 3) + 1;
+        const sound = document.querySelector(`#spear-thrust-${soundIndex}`);
+        if (sound) {
+          sound.currentTime = 0;
+          sound.volume = 0.6;
+          sound.play().catch(e => console.warn('Sound play error:', e));
         }
       } catch (e) {}
 
