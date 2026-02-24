@@ -56,7 +56,7 @@
   }
   // Setup simple game UI handlers (start/restart/quit)
   function initGameUI() {
-    const start3D = document.querySelector('#start-button-3d-world');
+    const start3D = document.querySelector('#start-button-3d');
     const scene = document.querySelector('a-scene');
     if (start3D) {
       // Ensure hidden by default (will be shown after room-scanned)
@@ -75,7 +75,7 @@
         start3D.setAttribute('visible', 'false');
         
         // Hide high scores button and AR button when game starts
-        const highScores3DBtn = document.querySelector('#high-scores-btn-3d-world');
+        const highScores3DBtn = document.querySelector('#high-scores-btn-3d');
         if (highScores3DBtn) highScores3DBtn.setAttribute('visible', 'false');
         const highScoresBtnHTML = document.getElementById('high-scores-btn');
         if (highScoresBtnHTML) {
@@ -161,13 +161,9 @@
         scene.addEventListener('room-scanned', (ev) => {
           // Small delay to allow visuals/UI to settle
           setTimeout(() => {
-            // Show UI panels container
-            const uiContainer = document.querySelector('#ui-panels-container');
-            if (uiContainer) uiContainer.setAttribute('visible', 'true');
-            
             start3D.setAttribute('visible', 'true');
             // Also show high scores button
-            const highScores3D = document.querySelector('#high-scores-btn-3d-world');
+            const highScores3D = document.querySelector('#high-scores-btn-3d');
             if (highScores3D) highScores3D.setAttribute('visible', 'true');
           }, 300);
         }, { once: true });
@@ -177,11 +173,8 @@
         setTimeout(() => {
           if (!window.FISH_ZONE || !window.FISH_ZONE.scanned) {
             console.warn('game-manager: No room scan detected - showing buttons anyway (fallback)');
-            const uiContainer = document.querySelector('#ui-panels-container');
-            if (uiContainer) uiContainer.setAttribute('visible', 'true');
-            
             start3D.setAttribute('visible', 'true');
-            const highScores3D = document.querySelector('#high-scores-btn-3d-world');
+            const highScores3D = document.querySelector('#high-scores-btn-3d');
             if (highScores3D) highScores3D.setAttribute('visible', 'true');
           }
         }, 10000);
@@ -216,7 +209,7 @@
       
       if (window.gameTimer && window.gameTimer.resetGame) window.gameTimer.resetGame();
       // Show high scores buttons again on quit
-      const highScores3DBtn = document.querySelector('#high-scores-btn-3d-world');
+      const highScores3DBtn = document.querySelector('#high-scores-btn-3d');
       if (highScores3DBtn && window.FISH_ZONE && window.FISH_ZONE.scanned) highScores3DBtn.setAttribute('visible', 'true');
       const highScoresBtnHTML = document.getElementById('high-scores-btn');
       if (highScoresBtnHTML) highScoresBtnHTML.style.display = 'flex';
@@ -228,7 +221,7 @@
     if (btnQuit3D) btnQuit3D.addEventListener('click', () => { 
       if (window.gameTimer && window.gameTimer.resetGame) window.gameTimer.resetGame();
       // Show high scores buttons again on quit
-      const highScores3DBtn = document.querySelector('#high-scores-btn-3d-world');
+      const highScores3DBtn = document.querySelector('#high-scores-btn-3d');
       if (highScores3DBtn && window.FISH_ZONE && window.FISH_ZONE.scanned) highScores3DBtn.setAttribute('visible', 'true');
       const highScoresBtnHTML = document.getElementById('high-scores-btn');
       if (highScoresBtnHTML) highScoresBtnHTML.style.display = 'flex';
@@ -244,8 +237,8 @@
       // Hide HTML button
       if (highScoresBtn) highScoresBtn.style.display = 'none';
       // Hide 3D buttons
-      const start3DBtn = document.querySelector('#start-button-3d-world');
-      const highScores3DBtn = document.querySelector('#high-scores-btn-3d-world');
+      const start3DBtn = document.querySelector('#start-button-3d');
+      const highScores3DBtn = document.querySelector('#high-scores-btn-3d');
       if (start3DBtn) start3DBtn.setAttribute('visible', 'false');
       if (highScores3DBtn) highScores3DBtn.setAttribute('visible', 'false');
     }
@@ -255,8 +248,8 @@
       if (highScoresBtn) highScoresBtn.style.display = 'flex';
       // Show 3D buttons (only if room was scanned)
       if (window.FISH_ZONE && window.FISH_ZONE.scanned) {
-        const start3DBtn = document.querySelector('#start-button-3d-world');
-        const highScores3DBtn = document.querySelector('#high-scores-btn-3d-world');
+        const start3DBtn = document.querySelector('#start-button-3d');
+        const highScores3DBtn = document.querySelector('#high-scores-btn-3d');
         if (start3DBtn) start3DBtn.setAttribute('visible', 'true');
         if (highScores3DBtn) highScores3DBtn.setAttribute('visible', 'true');
       }
@@ -352,7 +345,7 @@
     }
 
     // High Scores 3D button for VR
-    const highScoresBtn3D = document.querySelector('#high-scores-btn-3d-world');
+    const highScoresBtn3D = document.querySelector('#high-scores-btn-3d');
     const highScoresPanel3D = document.querySelector('#high-scores-panel-3d');
     const closeHighScores3D = document.querySelector('#close-high-scores-3d');
     

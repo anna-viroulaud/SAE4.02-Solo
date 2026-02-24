@@ -11,14 +11,14 @@ AFRAME.registerComponent('panel-placer', {
     this.placedPanels = [];
     this.availableWalls = [];
     this.panelsOnWalls = false;
-    
+
     this._onScan = (e) => {
       if (this.data.enabled) {
         this.placePanels(e.detail);
       }
     };
     this._onReset = () => this.resetPanelsToCamera();
-    
+
     this.el.sceneEl.addEventListener('room-scanned', this._onScan);
     this.el.sceneEl.addEventListener('room-reset', this._onReset);
 
@@ -28,10 +28,10 @@ AFRAME.registerComponent('panel-placer', {
 
   resetPanelsToCamera: function () {
     console.log('panel-placer: resetting panels to camera');
-    
+
     const camera = document.querySelector('#head');
     if (!camera) return;
-    
+
     // Panneaux à remettre sur la caméra avec leurs positions originales
     const panelsInfo = [
       { id: 'bonus-fish', position: '-0.15 0.2 -0.7', scale: '0.8 0.8 0.8' },
@@ -40,7 +40,7 @@ AFRAME.registerComponent('panel-placer', {
       { id: 'start-button-3d', position: '0 -0.1 -0.7' },
       { id: 'high-scores-btn-3d', position: '0 -0.25 -0.7' }
     ];
-    
+
     panelsInfo.forEach(info => {
       const panel = document.getElementById(info.id);
       if (panel && panel.parentNode !== camera) {
@@ -59,7 +59,7 @@ AFRAME.registerComponent('panel-placer', {
         panel.setAttribute('rotation', '0 0 0');
       }
     });
-    
+
     this.placedPanels = [];
     this.panelsOnWalls = false;
   },
@@ -72,12 +72,12 @@ AFRAME.registerComponent('panel-placer', {
   placePanels: function (roomData) {
     try {
       console.log('panel-placer: placePanels called (enabled:', this.data.enabled, ')');
-      
+
       if (!this.data.enabled) {
         console.log('panel-placer: disabled - panels stay on camera');
         return;
       }
-      
+
       if (!roomData.wallPlanes || roomData.wallPlanes.length === 0) {
         console.warn('panel-placer: No walls detected, panels will stay camera-attached');
         return;
@@ -109,30 +109,30 @@ AFRAME.registerComponent('panel-placer', {
       const sortedWalls = this.availableWalls.map(wallInfo => {
         const planeData = wallInfo.data;
         const bounds = planeData.bounds;
-        
+
         // Centre du mur
         const centerX = (bounds.minX + bounds.maxX) / 2;
         const centerY = (bounds.minY + bounds.maxY) / 2;
         const centerZ = (bounds.minZ + bounds.maxZ) / 2;
         const wallCenter = new AFRAME.THREE.Vector3(centerX, centerY, centerZ);
-        
+
         // Distance à la caméra
         const distance = cameraWorldPos.distanceTo(wallCenter);
-        
+
         // Calculer la normale du mur (perpendiculaire à sa surface)
         // Pour un mur vertical, utiliser les coins pour calculer la direction
         const wallDirX = bounds.maxX - bounds.minX;
         const wallDirZ = bounds.maxZ - bounds.minZ;
-        
+
         // La normale est perpendiculaire à la direction du mur
         let normal = new AFRAME.THREE.Vector3(-wallDirZ, 0, wallDirX).normalize();
-        
+
         // S'assurer que la normale pointe vers la caméra
         const toCamera = new AFRAME.THREE.Vector3().subVectors(cameraWorldPos, wallCenter);
         if (normal.dot(toCamera) < 0) {
           normal.negate();
         }
-        
+
         return {
           wallInfo: wallInfo,
           center: wallCenter,
@@ -181,7 +181,7 @@ AFRAME.registerComponent('panel-placer', {
   enableWallPlacement: function () {
     this.data.enabled = true;
     console.log('panel-placer: wall placement enabled');
-    
+
     // If room is already scanned, place panels now
     if (window.FISH_ZONE && window.FISH_ZONE.scanned && window.FISH_ZONE.wallPlanes) {
       const detail = {
@@ -203,11 +203,11 @@ AFRAME.registerComponent('panel-placer', {
   _placePanel: function (panelEl, wallData, floorY, panelInfo) {
     try {
       const THREE = AFRAME.THREE;
-      
+
       // Centre du mur et normale
       const wallCenter = wallData.center;
       const wallNormal = wallData.normal;
-      
+
       // Position du panneau : légèrement décalé du mur vers l'intérieur de la pièce
       const panelPos = wallCenter.clone().add(
         wallNormal.clone().multiplyScalar(this.data.panelDistance)
@@ -217,21 +217,21 @@ AFRAME.registerComponent('panel-placer', {
       const minWallY = wallData.bounds.minY;
       const maxWallY = wallData.bounds.maxY;
       const targetHeight = this.data.preferredHeight;
-      
+
       // Clamper la hauteur entre les limites du mur
       panelPos.y = Math.max(minWallY + 0.2, Math.min(maxWallY - 0.2, targetHeight));
 
       // Orienter le panneau pour qu'il fasse face à l'intérieur de la pièce
       panelEl.object3D.position.copy(panelPos);
-      
+
       // Calculer la rotation pour que le panneau soit parallèle au mur et face à la caméra
       const camera = document.querySelector('#head');
       const cameraWorldPos = new THREE.Vector3();
       camera.object3D.getWorldPosition(cameraWorldPos);
-      
+
       // Le panneau doit regarder vers la caméra
       panelEl.object3D.lookAt(cameraWorldPos);
-      
+
       // Forcer le panneau à rester vertical (pas de rotation sur X et Z)
       const currentRotation = panelEl.object3D.rotation;
       panelEl.object3D.rotation.set(0, currentRotation.y, 0);
@@ -244,9 +244,9 @@ AFRAME.registerComponent('panel-placer', {
       panelEl.setAttribute('visible', 'true');
 
       this.placedPanels.push(panelEl);
-      
+
       console.log(`panel-placer: Placed ${panelInfo.id} on wall at`, panelPos.toArray());
-      
+
     } catch (e) {
       console.error('panel-placer: _placePanel failed', e);
     }
