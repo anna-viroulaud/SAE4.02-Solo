@@ -132,11 +132,17 @@
 
             const onAnim = (ev) => {
               try { water.removeEventListener('animationcomplete', onAnim); } catch (e) {}
-              // spawn fishes (use fish-spawner API) then start timer
+              // spawn fishes depuis les fenêtres (window-spawner au lieu de fish-spawner)
               try {
-                const spawner = document.querySelector('[fish-spawner]');
-                if (spawner && spawner.components && spawner.components['fish-spawner'] && spawner.components['fish-spawner'].startSpawn) {
-                  spawner.components['fish-spawner'].startSpawn();
+                const windowSpawner = document.querySelector('[window-spawner]');
+                if (windowSpawner && windowSpawner.components && windowSpawner.components['window-spawner'] && windowSpawner.components['window-spawner'].startSpawning) {
+                  windowSpawner.components['window-spawner'].startSpawning();
+                } else {
+                  // Fallback: utiliser fish-spawner si window-spawner n'est pas disponible
+                  const spawner = document.querySelector('[fish-spawner]');
+                  if (spawner && spawner.components && spawner.components['fish-spawner'] && spawner.components['fish-spawner'].startSpawn) {
+                    spawner.components['fish-spawner'].startSpawn();
+                  }
                 }
               } catch (e) { console.warn('game-manager: spawn after rise failed', e); }
 
@@ -148,8 +154,14 @@
           } else {
             // If no water entity, just spawn and start
             try {
-              const spawner = document.querySelector('[fish-spawner]');
-              if (spawner && spawner.components && spawner.components['fish-spawner'] && spawner.components['fish-spawner'].startSpawn) spawner.components['fish-spawner'].startSpawn();
+              const windowSpawner = document.querySelector('[window-spawner]');
+              if (windowSpawner && windowSpawner.components && windowSpawner.components['window-spawner'] && windowSpawner.components['window-spawner'].startSpawning) {
+                windowSpawner.components['window-spawner'].startSpawning();
+              } else {
+                // Fallback
+                const spawner = document.querySelector('[fish-spawner]');
+                if (spawner && spawner.components && spawner.components['fish-spawner'] && spawner.components['fish-spawner'].startSpawn) spawner.components['fish-spawner'].startSpawn();
+              }
             } catch (e) {}
             try { if (window.gameTimer && window.gameTimer.startGame) window.gameTimer.startGame(60); } catch (e) {}
           }
@@ -193,7 +205,19 @@
         }
       } catch (e) {}
       
-      if (window.gameTimer && window.gameTimer.resetGame) { window.gameTimer.resetGame(); window.gameTimer.startGame(60); } 
+      if (window.gameTimer && window.gameTimer.resetGame) { 
+        window.gameTimer.resetGame(); 
+        // Relancer le spawn depuis les fenêtres
+        try {
+          const windowSpawner = document.querySelector('[window-spawner]');
+          if (windowSpawner && windowSpawner.components && windowSpawner.components['window-spawner'] && windowSpawner.components['window-spawner'].startSpawning) {
+            setTimeout(() => {
+              windowSpawner.components['window-spawner'].startSpawning();
+            }, 500); // Petit délai pour s'assurer que le reset est complet
+          }
+        } catch (e) { console.warn('Failed to restart window spawner:', e); }
+        window.gameTimer.startGame(60); 
+      } 
     });
     const btnQuit = document.getElementById('btn-quit');
     if (btnQuit) btnQuit.addEventListener('click', () => { 
@@ -216,7 +240,21 @@
     });
 
     const btnRestart3D = document.querySelector('#btn-restart-3d');
-    if (btnRestart3D) btnRestart3D.addEventListener('click', () => { if (window.gameTimer && window.gameTimer.resetGame) { window.gameTimer.resetGame(); window.gameTimer.startGame(60); } });
+    if (btnRestart3D) btnRestart3D.addEventListener('click', () => { 
+      if (window.gameTimer && window.gameTimer.resetGame) { 
+        window.gameTimer.resetGame(); 
+        // Relancer le spawn depuis les fenêtres
+        try {
+          const windowSpawner = document.querySelector('[window-spawner]');
+          if (windowSpawner && windowSpawner.components && windowSpawner.components['window-spawner'] && windowSpawner.components['window-spawner'].startSpawning) {
+            setTimeout(() => {
+              windowSpawner.components['window-spawner'].startSpawning();
+            }, 500);
+          }
+        } catch (e) { console.warn('Failed to restart window spawner:', e); }
+        window.gameTimer.startGame(60); 
+      } 
+    });
     const btnQuit3D = document.querySelector('#btn-quit-3d');
     if (btnQuit3D) btnQuit3D.addEventListener('click', () => { 
       if (window.gameTimer && window.gameTimer.resetGame) window.gameTimer.resetGame();

@@ -372,6 +372,15 @@
       const scoreDisplayReset = document.querySelector('#score-display-world'); if (scoreDisplayReset) scoreDisplayReset.setAttribute('value','Fish: 0 | Points: 0');
       const scoreDisplayResetCam = document.querySelector('#score-display'); if (scoreDisplayResetCam) scoreDisplayResetCam.setAttribute('value','Fish: 0 | Points: 0');
       const grabManager = document.querySelector('[grab-manager]'); if (grabManager && grabManager.components && grabManager.components['grab-manager']) { grabManager.components['grab-manager'].fishCaught = 0; grabManager.components['grab-manager'].points = 0; }
+      
+      // Arrêter le window-spawner et supprimer les poissons existants
+      try {
+        const windowSpawner = document.querySelector('[window-spawner]');
+        if (windowSpawner && windowSpawner.components && windowSpawner.components['window-spawner'] && windowSpawner.components['window-spawner'].stopSpawning) {
+          windowSpawner.components['window-spawner'].stopSpawning();
+        }
+      } catch (e) { console.warn('Failed to stop window spawner:', e); }
+      
       const fishTargets = document.querySelectorAll('.fish-target'); fishTargets.forEach(f => { delete f.dataset.caught; f.setAttribute('visible', 'false'); });
       // show AR and High Scores buttons again when returning to menu
       const arOverlay = document.getElementById('ar-overlay'); if (arOverlay) arOverlay.style.display = 'flex';
