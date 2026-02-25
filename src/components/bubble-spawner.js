@@ -127,8 +127,8 @@ AFRAME.registerComponent('bubble-spawner', {
     const dz = (Math.random() - 0.5) * 0.06;
     bubble.object3D.position.set(x, y, z);
 
-    const parent = document.querySelector('#world-anchor') || this.el.sceneEl;
-    parent.appendChild(bubble);
+    // Attacher directement à la scène (coordonnées monde)
+    this.el.sceneEl.appendChild(bubble);
     this.bubbles.push(bubble);
 
     // Cleanup after lifetime

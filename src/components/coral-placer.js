@@ -38,18 +38,8 @@ AFRAME.registerComponent('coral-placer', {
         this.placeCorals(detail);
       }, 200);
     }
-    // Fallback: if no room-scanned within 7s, place corals using a sensible default for quick testing
-    this._fallbackTimer = setTimeout(() => {
-      if (this.placed.length === 0 && !(window.FISH_ZONE && window.FISH_ZONE.scanned)) {
-        const testData = {
-          bounds: { minX: -2, maxX: 2, minZ: -4, maxZ: 0 },
-          floorY: 0,
-          height: 2.4
-        };
-        console.warn('coral-placer: no scan received — using fallback placement for testing');
-        this.placeCorals(testData);
-      }
-    }, 7000);
+    
+    console.log('coral-placer: initialized, waiting for room-scanned event');
   },
 
   clearCorals: function () {
@@ -113,19 +103,26 @@ AFRAME.registerComponent('coral-placer', {
       const numDecor = Math.max(this.data.maxOnFloor, Math.floor(floorArea * this.data.densityFloor));
       
       console.log(`coral-placer: scattering ${numDecor} environment decorations on floor area ${floorArea.toFixed(2)}m²`);
+      console.log(`coral-placer: floor bounds X:[${minX.toFixed(2)}, ${maxX.toFixed(2)}] Z:[${minZ.toFixed(2)}, ${maxZ.toFixed(2)}] Y:${roomData.floorY.toFixed(2)}`);
       
       // Apply safety margin to prevent decorations from spawning too close to edges
-      const safetyMargin = 1; // Augmenté de 0.3 à 0.6 pour éviter que les coraux sortent de la room
+      const safetyMargin = 0.7; // Marge réduite pour zone plus petite et sécurisée
       const safeMinX = minX + safetyMargin;
       const safeMaxX = maxX - safetyMargin;
       const safeMinZ = minZ + safetyMargin;
       const safeMaxZ = maxZ - safetyMargin;
       
+      // Vérifier qu'on a un espace valide
+      if (safeMaxX <= safeMinX || safeMaxZ <= safeMinZ) {
+        console.warn('coral-placer: safe zone too small, skipping floor decorations');
+        return;
+      }
+      
       for (let i = 0; i < numDecor; i++) {
         // Spawn within safe bounds
         const x = safeMinX + Math.random() * (safeMaxX - safeMinX);
         const z = safeMinZ + Math.random() * (safeMaxZ - safeMinZ);
-        const pos = new AFRAME.THREE.Vector3(x, roomData.floorY + 0.08, z); // lifted higher above floor
+        const pos = new AFRAME.THREE.Vector3(x, roomData.floorY, z); // Position de base au niveau du sol
         
         // Check distance from existing decorations to avoid overlap
         const tooClose = this.placed.some(c => {
@@ -141,6 +138,8 @@ AFRAME.registerComponent('coral-placer', {
           this._spawnCoralAt(pos, randomModel.id, randomModel.scaleMultiplier, randomModel.yOffset);
         }
       }
+      
+      console.log(`✅ coral-placer: ${this.placed.length} decorations placed`);
     } catch (e) {
       console.warn('coral-placer: placement failed', e);
     }
@@ -162,7 +161,6 @@ AFRAME.registerComponent('coral-placer', {
   _spawnStarfishAt: function (posVec3) {
     // Create starfish entity (original behavior for yellow surfaces only)
     const ent = document.createElement('a-entity');
-    console.log('coral-placer: _spawnStarfishAt pos=', posVec3.toArray());
     ent.setAttribute('gltf-model', '#starfish');
     
     // Original starfish scale (much smaller)
@@ -171,26 +169,16 @@ AFRAME.registerComponent('coral-placer', {
     
     ent.setAttribute('scale', `${s} ${s} ${s}`);
     
-    // Clamp X/Z to remain well inside detected room bounds
-    try {
-      const rb = (window.FISH_ZONE && window.FISH_ZONE.roomBounds) ? window.FISH_ZONE.roomBounds : null;
-      if (rb) {
-        const pad = Math.max(0, this.data.floorPadding) + 0.05;
-        const sizeMargin = Math.max(0.05, s * 0.4);
-        const minX = rb.minX + sizeMargin;
-        const maxX = rb.maxX - sizeMargin;
-        const minZ = rb.minZ + sizeMargin;
-        const maxZ = rb.maxZ - sizeMargin;
-        if (isFinite(minX) && isFinite(maxX) && minX < maxX) posVec3.x = Math.min(Math.max(posVec3.x, minX), maxX);
-        if (isFinite(minZ) && isFinite(maxZ) && minZ < maxZ) posVec3.z = Math.min(Math.max(posVec3.z, minZ), maxZ);
-        if (rb.minY != null && rb.maxY != null) {
-          const floorY = rb.minY;
-          posVec3.y = Math.max(posVec3.y, floorY + 0.02);
-        }
-      }
-    } catch (e) {
-      // ignore clamping errors
+    // Ajuster légèrement au-dessus de la surface
+    posVec3.y += 0.01; // 1cm au-dessus de la surface détectée
+    
+    // Valider la position
+    if (!isFinite(posVec3.x) || !isFinite(posVec3.y) || !isFinite(posVec3.z)) {
+      console.warn('coral-placer: invalid starfish position', posVec3.toArray());
+      return;
     }
+    
+    console.log('coral-placer: placing starfish at', posVec3.toArray().map(v => v.toFixed(2)));
     
     ent.setAttribute('position', `${posVec3.x.toFixed(3)} ${posVec3.y.toFixed(3)} ${posVec3.z.toFixed(3)}`);
     
@@ -198,16 +186,17 @@ AFRAME.registerComponent('coral-placer', {
     ent.setAttribute('rotation', `0 ${ry.toFixed(1)} 0`);
     ent.classList.add('coral');
 
-    const parent = document.querySelector('#world-anchor') || this.el.sceneEl;
-    parent.appendChild(ent);
+    // Attacher directement à la scène (coordonnées monde)
+    this.el.sceneEl.appendChild(ent);
     this.placed.push(ent);
+    
+    console.log('✅ starfish placed:', this.placed.length);
   },
 
   _spawnCoralAt: function (posVec3, modelId, scaleMultiplier, yOffset) {
     // Create entity using the environment decoration asset (for floor placement)
     const ent = document.createElement('a-entity');
     const model = modelId || '#coral-red';
-    console.log('coral-placer: _spawnCoralAt model=', model, 'pos=', posVec3.toArray());
     ent.setAttribute('gltf-model', model);
     
     // Random uniform scale with model-specific multiplier
@@ -220,36 +209,16 @@ AFRAME.registerComponent('coral-placer', {
     
     ent.setAttribute('scale', `${s} ${s} ${s}`);
     
-    // Clamp X/Z to remain well inside detected room bounds with larger safety margins
-    try {
-      const rb = (window.FISH_ZONE && window.FISH_ZONE.roomBounds) ? window.FISH_ZONE.roomBounds : null;
-      if (rb) {
-        // Larger safety margin based on model scale to ensure decorations stay inside
-        const basePadding = 0.35;
-        const sizeMargin = Math.max(0.15, s * 1.2); // More conservative margin
-        const minX = rb.minX + basePadding + sizeMargin;
-        const maxX = rb.maxX - basePadding - sizeMargin;
-        const minZ = rb.minZ + basePadding + sizeMargin;
-        const maxZ = rb.maxZ - basePadding - sizeMargin;
-        
-        if (isFinite(minX) && isFinite(maxX) && minX < maxX) {
-          posVec3.x = Math.min(Math.max(posVec3.x, minX), maxX);
-        }
-        if (isFinite(minZ) && isFinite(maxZ) && minZ < maxZ) {
-          posVec3.z = Math.min(Math.max(posVec3.z, minZ), maxZ);
-        }
-        
-        // Adjust Y to be clearly above floor + model-specific offset
-        if (rb.minY != null && rb.maxY != null) {
-          const floorY = rb.minY;
-          posVec3.y = Math.max(posVec3.y, floorY + 0.08 + modelYOffset); // Higher above floor + model offset
-        } else {
-          posVec3.y += modelYOffset; // Apply offset even without room bounds
-        }
-      }
-    } catch (e) {
-      console.warn('coral-placer: clamping error', e);
+    // Appliquer l'offset Y directement à la position (légèrement au-dessus du sol)
+    posVec3.y += 0.02 + modelYOffset; // 2cm au-dessus du sol + offset spécifique au modèle
+    
+    // Vérifier que la position finale est valide
+    if (!isFinite(posVec3.x) || !isFinite(posVec3.y) || !isFinite(posVec3.z)) {
+      console.warn('coral-placer: invalid position', posVec3.toArray());
+      return;
     }
+    
+    console.log('coral-placer: placing', model.replace('#', ''), 'at', posVec3.toArray().map(v => v.toFixed(2)));
     
     ent.setAttribute('position', `${posVec3.x.toFixed(3)} ${posVec3.y.toFixed(3)} ${posVec3.z.toFixed(3)}`);
     
@@ -258,15 +227,16 @@ AFRAME.registerComponent('coral-placer', {
     ent.setAttribute('rotation', `0 ${ry.toFixed(1)} 0`);
     ent.classList.add('environment-decor');
 
-    const parent = document.querySelector('#world-anchor') || this.el.sceneEl;
-    parent.appendChild(ent);
+    // Attacher directement à la scène (coordonnées monde)
+    this.el.sceneEl.appendChild(ent);
     this.placed.push(ent);
+    
+    console.log('✅ coral placed:', this.placed.length);
   },
 
   remove: function () {
     this.clearCorals();
     this.el.sceneEl.removeEventListener('room-scanned', this._onScan);
     this.el.sceneEl.removeEventListener('room-reset', this._onReset);
-    clearTimeout(this._fallbackTimer);
   }
 });

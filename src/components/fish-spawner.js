@@ -829,7 +829,8 @@ AFRAME.registerComponent('fish-spawner', {
     this.ceilingY = maxY;
 
     const scene = this.el.sceneEl;
-    const parent = document.querySelector('#world-anchor') || scene;
+    // Attacher directement à la scène (coordonnées monde)
+    const parent = scene;
 
     console.debug(`🐟 Spawn de ${this.data.count} poissons dans la pièce détectée:`);
     console.debug(`   Bounds RÉELS du sol:`);

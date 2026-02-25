@@ -236,9 +236,8 @@ AFRAME.registerComponent('panel-placer', {
       const currentRotation = panelEl.object3D.rotation;
       panelEl.object3D.rotation.set(0, currentRotation.y, 0);
 
-      // Attacher au world-anchor pour que le panneau reste fixe dans l'espace
-      const worldAnchor = document.querySelector('#world-anchor') || this.el.sceneEl;
-      worldAnchor.appendChild(panelEl);
+      // Attacher directement à la scène (coordonnées monde)
+      this.el.sceneEl.appendChild(panelEl);
 
       // Rendre visible si ce n'était pas déjà le cas
       panelEl.setAttribute('visible', 'true');

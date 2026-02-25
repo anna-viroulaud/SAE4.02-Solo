@@ -304,9 +304,8 @@ AFRAME.registerComponent('window-spawner', {
     
     // Après l'animation, le mode 'flow' prendra le relais automatiquement
     
-    // Ajouter à la scène
-    const container = document.querySelector('#fish-container') || this.el.sceneEl;
-    container.appendChild(fish);
+    // Ajouter directement à la scène (coordonnées monde)
+    this.el.sceneEl.appendChild(fish);
     
     this.fishCount++;
     
