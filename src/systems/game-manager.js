@@ -152,7 +152,7 @@
                 }
               } catch (e) { console.warn('game-manager: spawn after rise failed', e); }
 
-              try { if (window.gameTimer && window.gameTimer.startGame) window.gameTimer.startGame(60); } catch (e) {}
+              try { if (window.gameTimer && window.gameTimer.startGame) window.gameTimer.startGame(120); } catch (e) {}
             };
 
             // listen for animationcomplete
@@ -169,7 +169,7 @@
                 if (spawner && spawner.components && spawner.components['fish-spawner'] && spawner.components['fish-spawner'].startSpawn) spawner.components['fish-spawner'].startSpawn();
               }
             } catch (e) {}
-            try { if (window.gameTimer && window.gameTimer.startGame) window.gameTimer.startGame(60); } catch (e) {}
+            try { if (window.gameTimer && window.gameTimer.startGame) window.gameTimer.startGame(120); } catch (e) {}
           }
         } catch (e) { console.warn('start button handler error', e); }
       });
@@ -233,7 +233,8 @@
       } catch (e) {}
       
       if (window.gameTimer && window.gameTimer.resetGame) { 
-        window.gameTimer.resetGame(); 
+        // NE PAS afficher les boutons menu lors d'un restart (false)
+        window.gameTimer.resetGame(false); 
         // Relancer le spawn depuis les fenêtres
         try {
           const windowSpawner = document.querySelector('[window-spawner]');
@@ -243,7 +244,7 @@
             }, 500); // Petit délai pour s'assurer que le reset est complet
           }
         } catch (e) { console.warn('Failed to restart window spawner:', e); }
-        window.gameTimer.startGame(60); 
+        window.gameTimer.startGame(120); 
       } 
     });
     const btnQuit = document.getElementById('btn-quit');
@@ -269,7 +270,8 @@
     const btnRestart3D = document.querySelector('#btn-restart-3d');
     if (btnRestart3D) btnRestart3D.addEventListener('click', () => { 
       if (window.gameTimer && window.gameTimer.resetGame) { 
-        window.gameTimer.resetGame(); 
+        // NE PAS afficher les boutons menu lors d'un restart (false)
+        window.gameTimer.resetGame(false); 
         // Relancer le spawn depuis les fenêtres
         try {
           const windowSpawner = document.querySelector('[window-spawner]');
@@ -279,7 +281,7 @@
             }, 500);
           }
         } catch (e) { console.warn('Failed to restart window spawner:', e); }
-        window.gameTimer.startGame(60); 
+        window.gameTimer.startGame(120); 
       } 
     });
     const btnQuit3D = document.querySelector('#btn-quit-3d');

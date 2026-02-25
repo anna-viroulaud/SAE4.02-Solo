@@ -21,11 +21,13 @@ git <!DOCTYPE html>
   <script src="src/components/bubble-spawner.js"></script>
   <script src="src/components/fish-rotator.js"></script>
   <script src="src/components/coral-placer.js"></script>
+  <script src="src/components/chest-manager.js"></script>
   <script src="src/components/panel-placer.js"></script>
   <script src="src/components/look-at-camera.js"></script>
   <script src="src/components/fish-spawner.js"></script>
   <script src="src/components/room-detection.js"></script>
   <script src="src/components/window-spawner.js"></script>
+  <script src="src/components/debug-panel.js"></script>
   <script src="src/systems/game-timer.js"></script>
   <script src="src/systems/game-manager.js"></script>
 </head>
@@ -142,7 +144,14 @@ git <!DOCTYPE html>
     renderer="colorManagement: true; alpha: true; antialias: true; sortTransparentObjects: true">
 
     <a-assets>
+      <!-- Spear models (different levels) -->
       <a-asset-item id="spear-model" src="assets/models/stylized_low-poly_spear.glb"></a-asset-item>
+      <a-asset-item id="spear-level0" src="assets/models/spear_level0.glb"></a-asset-item>
+      <a-asset-item id="spear-level1" src="assets/models/spear_level1.glb"></a-asset-item>
+      <a-asset-item id="spear-level3" src="assets/models/spear_level3.glb"></a-asset-item>
+      <!-- Treasure chest for weapon selection -->
+      <a-asset-item id="treasure-chest" src="assets/models/treasure_chest.glb"></a-asset-item>
+      <!-- Fish models -->
       <a-asset-item id="goldfish" src="assets/models/Goldfish.glb"></a-asset-item>
       <a-asset-item id="piranha" src="assets/models/Piranha.glb"></a-asset-item>
       <a-asset-item id="thon" src="assets/models/thon.glb"></a-asset-item>
@@ -229,6 +238,64 @@ git <!DOCTYPE html>
           </a-entity>
         </a-entity>
 
+        <!-- PANNEAU DE SÉLECTION D'ARMES (Weapon Selection) -->
+        <a-entity id="weapon-panel-3d" position="0 0 -1.0" visible="false">
+          <!-- Fond du panneau -->
+          <a-plane color="#1a1a2e" opacity="0.95" width="1.2" height="1.0" position="0 0 -0.02" material="shader: flat; side: double"></a-plane>
+          <!-- Bordure dorée -->
+          <a-box color="#FFD700" width="1.2" height="0.02" depth="0.01" position="0 0.5 0"></a-box>
+          <a-box color="#FFD700" width="1.2" height="0.02" depth="0.01" position="0 -0.5 0"></a-box>
+          <a-box color="#FFD700" width="0.02" height="1.0" depth="0.01" position="-0.6 0 0"></a-box>
+          <a-box color="#FFD700" width="0.02" height="1.0" depth="0.01" position="0.6 0 0"></a-box>
+          <!-- Titre -->
+          <a-text value="🔱 SÉLECTION D'ARME 🔱" align="center" color="#FFD700" width="1.8" position="0 0.38 0.01"></a-text>
+          
+          <!-- Arme 1 : Lance Basique (en haut à gauche) -->
+          <a-entity id="weapon-btn-spear-model" class="clickable" position="-0.28 0.12 0.01"
+                    animation__hover="property: scale; from: 1 1 1; to: 1.05 1.05 1.05; startEvents: mouseenter; dur: 150"
+                    animation__leave="property: scale; from: 1.05 1.05 1.05; to: 1 1 1; startEvents: mouseleave; dur: 150">
+            <a-box class="clickable" color="#2c3e50" width="0.45" height="0.18" depth="0.02"></a-box>
+            <a-text value="Lance Basique" align="center" color="#FFFFFF" width="0.8" position="0 0.04 0.015"></a-text>
+            <a-text value="⚡100%  💥100%" align="center" color="#FFD700" width="0.7" position="0 -0.03 0.015"></a-text>
+          </a-entity>
+          
+          <!-- Arme 2 : Lance de Bronze (en haut à droite) -->
+          <a-entity id="weapon-btn-spear-level0" class="clickable" position="0.28 0.12 0.01"
+                    animation__hover="property: scale; from: 1 1 1; to: 1.05 1.05 1.05; startEvents: mouseenter; dur: 150"
+                    animation__leave="property: scale; from: 1.05 1.05 1.05; to: 1 1 1; startEvents: mouseleave; dur: 150">
+            <a-box class="clickable" color="#2c3e50" width="0.45" height="0.18" depth="0.02"></a-box>
+            <a-text value="Lance de Bronze" align="center" color="#FFFFFF" width="0.8" position="0 0.04 0.015"></a-text>
+            <a-text value="⚡110%  💥120%" align="center" color="#FFD700" width="0.7" position="0 -0.03 0.015"></a-text>
+          </a-entity>
+          
+          <!-- Arme 3 : Lance d'Argent (en bas à gauche) -->
+          <a-entity id="weapon-btn-spear-level1" class="clickable" position="-0.28 -0.12 0.01"
+                    animation__hover="property: scale; from: 1 1 1; to: 1.05 1.05 1.05; startEvents: mouseenter; dur: 150"
+                    animation__leave="property: scale; from: 1.05 1.05 1.05; to: 1 1 1; startEvents: mouseleave; dur: 150">
+            <a-box class="clickable" color="#2c3e50" width="0.45" height="0.18" depth="0.02"></a-box>
+            <a-text value="Lance d'Argent" align="center" color="#FFFFFF" width="0.8" position="0 0.04 0.015"></a-text>
+            <a-text value="⚡120%  💥150%" align="center" color="#FFD700" width="0.7" position="0 -0.03 0.015"></a-text>
+          </a-entity>
+          
+          <!-- Arme 4 : Lance Légendaire (en bas à droite) -->
+          <a-entity id="weapon-btn-spear-level3" class="clickable" position="0.28 -0.12 0.01"
+                    animation__hover="property: scale; from: 1 1 1; to: 1.05 1.05 1.05; startEvents: mouseenter; dur: 150"
+                    animation__leave="property: scale; from: 1.05 1.05 1.05; to: 1 1 1; startEvents: mouseleave; dur: 150">
+            <a-box class="clickable" color="#2c3e50" width="0.45" height="0.18" depth="0.02"></a-box>
+            <a-text value="Lance Légendaire" align="center" color="#FFFFFF" width="0.8" position="0 0.04 0.015"></a-text>
+            <a-text value="⚡150%  💥200%" align="center" color="#FFD700" width="0.7" position="0 -0.03 0.015"></a-text>
+          </a-entity>
+          
+          <!-- Bouton fermer -->
+          <a-entity id="close-weapon-panel-3d" class="clickable" position="0 -0.38 0.01"
+                    animation__hover="property: scale; from: 1 1 1; to: 1.05 1.05 1.05; startEvents: mouseenter; dur: 150"
+                    animation__leave="property: scale; from: 1.05 1.05 1.05; to: 1 1 1; startEvents: mouseleave; dur: 150">
+            <a-box class="clickable" color="#e74c3c" width="0.35" height="0.1" depth="0.02">
+              <a-text value="FERMER" align="center" anchor="center" baseline="center" color="#ffffff" width="1" position="0 0 0.015"></a-text>
+            </a-box>
+          </a-entity>
+        </a-entity>
+
         <!-- Reset spear buttons removed -->
 
         <!-- Écran de fin de jeu en 3D (copie depuis la branche score-challenge) -->
@@ -286,6 +353,9 @@ git <!DOCTYPE html>
         spear-bounce="restitution:0.5; damping:0.7">
       </a-entity>
 
+      <!-- TEST DISPLAY SUPPRIMÉ - Le panneau des armes est fonctionnel -->
+      <!-- Les lances de test ont été retirées car le système de sélection fonctionne -->
+
       <!-- Les poissons seront générés automatiquement par fish-spawner après le scan de la pièce -->
 
       <!-- Bubble spawner: spawn intermittently under water inside the detected room -->
@@ -293,6 +363,9 @@ git <!DOCTYPE html>
 
       <!-- Coral placer: place coral models on yellow visuals and on the floor after scan -->
       <a-entity id="coral-placer" coral-placer></a-entity>
+
+      <!-- Chest manager: spawn treasure chest for weapon selection -->
+      <a-entity id="chest-manager" chest-manager="enabled: true"></a-entity>
 
       <!-- Panel placer: optionally place UI panels on detected walls (disabled by default) -->
       <a-entity id="panel-placer" panel-placer="enabled: false"></a-entity>
@@ -304,6 +377,9 @@ git <!DOCTYPE html>
       <a-entity id="fish-container"></a-entity>
 
     </a-entity>
+
+    <!-- Debug Panel - Affiche les logs en VR -->
+    <a-entity debug-panel="enabled: true; followCamera: false; position: -0.8 0.3 -1.5"></a-entity>
 
     <!-- VR Hands with laser controls and raycasters to interact with 3D UI -->
     <a-entity id="leftHand" hand-controls="hand: left; handModelStyle: lowPoly; color: #15ACCF" laser-controls="hand: left" raycaster="objects: .clickable" visible="true"></a-entity>
@@ -423,8 +499,8 @@ git <!DOCTYPE html>
       if (restart) restart.addEventListener('click', () => {
         try {
           if (window.gameTimer && window.gameTimer.resetGame) window.gameTimer.resetGame();
-          // small delay then start a fresh game (default 60s)
-          setTimeout(() => { try { if (window.gameTimer && window.gameTimer.startGame) window.gameTimer.startGame(60); } catch(e){} }, 200);
+          // small delay then start a fresh game (120s = 2 minutes)
+          setTimeout(() => { try { if (window.gameTimer && window.gameTimer.startGame) window.gameTimer.startGame(120); } catch(e){} }, 200);
         } catch (e) { console.warn('restart click error', e); }
       });
       if (quit) quit.addEventListener('click', () => {

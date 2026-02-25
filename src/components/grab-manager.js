@@ -208,17 +208,21 @@ AFRAME.registerComponent('grab-manager', {
           el.object3D.getWorldQuaternion(worldQuat);
           const forward = forwardLocal.applyQuaternion(worldQuat).normalize();
 
+          // Récupérer les stats de l'arme si disponibles
+          const weaponStats = (window.WEAPON_STATS && window.WEAPON_STATS.current) || { speed: 1.0, damage: 1.0 };
+          const speedMultiplier = weaponStats.speed || 1.0;
+
           // softer launch: prefer last hand velocity (reduced), otherwise gentle forward speed
           let speedVec = new AFRAME.THREE.Vector3();
           if (this.lastHandVel && this.lastHandVel.length() > 0.02) {
-            speedVec.copy(this.lastHandVel).multiplyScalar(0.6 * this.data.throwPower);
+            speedVec.copy(this.lastHandVel).multiplyScalar(0.6 * this.data.throwPower * speedMultiplier);
           } else {
             // gentle forward speed when hand movement low
-            speedVec.copy(forward).multiplyScalar(1.2 * this.data.throwPower);
+            speedVec.copy(forward).multiplyScalar(1.2 * this.data.throwPower * speedMultiplier);
           }
 
-          // Clamp speed to avoid flying away
-          const maxSpeed = Math.max(0.1, this.data.maxLaunchSpeed);
+          // Clamp speed to avoid flying away (ajusté par les stats de l'arme)
+          const maxSpeed = Math.max(0.1, this.data.maxLaunchSpeed * speedMultiplier);
           const speedLen = speedVec.length();
           if (speedLen > maxSpeed) {
             speedVec.multiplyScalar(maxSpeed / speedLen);
@@ -700,9 +704,14 @@ AFRAME.registerComponent('grab-manager', {
       console.log(`🎯 Bonus fish type: ${bonusFishType}`);
 
       const isCorrect = (caughtFishType && bonusFishType && caughtFishType === bonusFishType) || false;
-      const pointsEarned = isCorrect ? 10 : -5;
       
-      console.log(`⚖️ Is correct: ${isCorrect}, Points earned: ${pointsEarned}`);
+      // Appliquer le multiplicateur de dégâts de l'arme aux points
+      const weaponStats = (window.WEAPON_STATS && window.WEAPON_STATS.current) || { speed: 1.0, damage: 1.0 };
+      const damageMultiplier = weaponStats.damage || 1.0;
+      const basePoints = isCorrect ? 10 : -5;
+      const pointsEarned = Math.floor(basePoints * damageMultiplier);
+      
+      console.log(`⚖️ Is correct: ${isCorrect}, Base points: ${basePoints}, Damage multiplier: ${damageMultiplier}x, Points earned: ${pointsEarned}`);
 
       // record to game timer
       if (window.gameTimer && window.gameTimer.isGameActive && window.gameTimer.isGameActive()) {

@@ -5,8 +5,8 @@
 AFRAME.registerComponent('window-spawner', {
   schema: {
     enabled: { type: 'boolean', default: true },
-    spawnInterval: { type: 'number', default: 5000 }, // Intervalle entre chaque apparition (ms)
-    maxFish: { type: 'number', default: 15 }
+    spawnInterval: { type: 'number', default: 8000 }, // Intervalle entre chaque apparition (ms) - AUGMENTÉ pour moins de poissons
+    maxFish: { type: 'number', default: 8 } // RÉDUIT de 15 à 8
   },
 
   init: function () {

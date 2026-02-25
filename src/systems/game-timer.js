@@ -1,7 +1,7 @@
 // Système de chronomètre et gestion de la fin de jeu (adapté depuis la branche score-challenge)
 (function () {
   let gameActive = false;
-  let timeRemaining = 60; // seconds
+  let timeRemaining = 120; // seconds (2 minutes)
   let caughtFishes = [];
   let totalScore = 0;
   let timerInterval = null;
@@ -14,7 +14,7 @@
   }
 
   window.gameTimer = {
-    startGame: function (duration = 60) {
+    startGame: function (duration = 120) {
       gameActive = true;
       timeRemaining = duration;
       caughtFishes = [];
@@ -425,8 +425,8 @@
       endScreen3D.appendChild(tableContainer);
     },
 
-    resetGame: function () {
-      gameActive = false; if (timerInterval) clearInterval(timerInterval); timeRemaining = 60; caughtFishes = []; totalScore = 0; endGameSoundPlayed = false;
+    resetGame: function (showMenuButtons = true) {
+      gameActive = false; if (timerInterval) clearInterval(timerInterval); timeRemaining = 120; caughtFishes = []; totalScore = 0; endGameSoundPlayed = false;
       
       // Stop and reset underwater loop to prevent it from playing in next game
       try {
@@ -444,8 +444,8 @@
       }
       const endScreen3D = document.querySelector('#end-screen-3d'); if (endScreen3D) endScreen3D.setAttribute('visible','false');
       const timer3D = document.querySelector('#timer-3d'); if (timer3D) timer3D.setAttribute('visible','false');
-      const timerDisplay = document.getElementById('timer-display'); if (timerDisplay) { timerDisplay.style.display = 'none'; timerDisplay.textContent = '1:00'; timerDisplay.style.color = '#FFD700'; }
-      const timerText3D = document.querySelector('#timer-text'); if (timerText3D) { timerText3D.setAttribute('value','1:00'); timerText3D.setAttribute('color','#FFD700'); }
+      const timerDisplay = document.getElementById('timer-display'); if (timerDisplay) { timerDisplay.style.display = 'none'; timerDisplay.textContent = '2:00'; timerDisplay.style.color = '#FFD700'; }
+      const timerText3D = document.querySelector('#timer-text'); if (timerText3D) { timerText3D.setAttribute('value','2:00'); timerText3D.setAttribute('color','#FFD700'); }
       const scoreDisplayReset = document.querySelector('#score-display-world'); if (scoreDisplayReset) scoreDisplayReset.setAttribute('value','Fish: 0 | Points: 0');
       const scoreDisplayResetCam = document.querySelector('#score-display'); if (scoreDisplayResetCam) scoreDisplayResetCam.setAttribute('value','Fish: 0 | Points: 0');
       const grabManager = document.querySelector('[grab-manager]'); if (grabManager && grabManager.components && grabManager.components['grab-manager']) { grabManager.components['grab-manager'].fishCaught = 0; grabManager.components['grab-manager'].points = 0; }
@@ -459,14 +459,27 @@
       } catch (e) { console.warn('Failed to stop window spawner:', e); }
       
       const fishTargets = document.querySelectorAll('.fish-target'); fishTargets.forEach(f => { delete f.dataset.caught; f.setAttribute('visible', 'false'); });
-      // show AR and High Scores buttons again when returning to menu
-      const arOverlay = document.getElementById('ar-overlay'); if (arOverlay) arOverlay.style.display = 'flex';
-      const highScoresBtn = document.getElementById('high-scores-btn'); 
-      if (highScoresBtn) { 
-        highScoresBtn.style.display = 'flex'; 
-        highScoresBtn.style.pointerEvents = 'auto'; 
+      
+      // SEULEMENT afficher les boutons si on retourne au menu (pas lors d'un restart)
+      if (showMenuButtons) {
+        // show AR and High Scores buttons again when returning to menu
+        const arOverlay = document.getElementById('ar-overlay'); if (arOverlay) arOverlay.style.display = 'flex';
+        const highScoresBtn = document.getElementById('high-scores-btn'); 
+        if (highScoresBtn) { 
+          highScoresBtn.style.display = 'flex'; 
+          highScoresBtn.style.pointerEvents = 'auto'; 
+        }
+        // Réafficher les boutons 3D (start et high scores)
+        const startBtn3D = document.querySelector('#start-button-3d');
+        if (startBtn3D && window.FISH_ZONE && window.FISH_ZONE.scanned) startBtn3D.setAttribute('visible', 'true');
+        const highScoresBtn3D = document.querySelector('#high-scores-btn-3d');
+        if (highScoresBtn3D && window.FISH_ZONE && window.FISH_ZONE.scanned) highScoresBtn3D.setAttribute('visible', 'true');
       }
-      console.log('🔄 Game reset');
+      
+      // Réafficher le coffre s'il existe
+      const chest = document.querySelector('.chest');
+      if (chest) chest.setAttribute('visible', 'true');
+      console.log('🔄 Game reset (showMenuButtons:', showMenuButtons, ')');
     },
 
     isGameActive: function () { return gameActive; },
