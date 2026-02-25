@@ -259,7 +259,7 @@
       } catch (e) {}
       
       if (window.gameTimer && window.gameTimer.resetGame) window.gameTimer.resetGame();
-      // Show high scores buttons again on quit
+      // Show ONLY high scores button on quit (not Play)
       const highScores3DBtn = document.querySelector('#high-scores-btn-3d');
       if (highScores3DBtn && window.FISH_ZONE && window.FISH_ZONE.scanned) highScores3DBtn.setAttribute('visible', 'true');
       const highScoresBtnHTML = document.getElementById('high-scores-btn');
@@ -285,7 +285,7 @@
     const btnQuit3D = document.querySelector('#btn-quit-3d');
     if (btnQuit3D) btnQuit3D.addEventListener('click', () => { 
       if (window.gameTimer && window.gameTimer.resetGame) window.gameTimer.resetGame();
-      // Show high scores buttons again on quit
+      // Show ONLY high scores button on quit (not Play)
       const highScores3DBtn = document.querySelector('#high-scores-btn-3d');
       if (highScores3DBtn && window.FISH_ZONE && window.FISH_ZONE.scanned) highScores3DBtn.setAttribute('visible', 'true');
       const highScoresBtnHTML = document.getElementById('high-scores-btn');
@@ -311,11 +311,10 @@
     function showButtons() {
       // Show HTML button
       if (highScoresBtn) highScoresBtn.style.display = 'flex';
-      // Show 3D buttons (only if room was scanned)
+      
+      // Show ONLY high scores 3D button (NOT Play - Play is shown only after room-scanned)
       if (window.FISH_ZONE && window.FISH_ZONE.scanned) {
-        const start3DBtn = document.querySelector('#start-button-3d');
         const highScores3DBtn = document.querySelector('#high-scores-btn-3d');
-        if (start3DBtn) start3DBtn.setAttribute('visible', 'true');
         if (highScores3DBtn) highScores3DBtn.setAttribute('visible', 'true');
       }
     }

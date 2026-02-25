@@ -12,7 +12,11 @@ window.FISH_ZONE = {
 AFRAME.registerComponent('fish-movement', {
   schema: {
     speed: { type: 'number', default: 0.05 },
-    bounds: { type: 'number', default: 2 }
+    bounds: { type: 'number', default: 2 },
+    mode: { type: 'string', default: 'target' }, // 'target' ou 'flow'
+    directionX: { type: 'number', default: 0 },
+    directionY: { type: 'number', default: 0 },
+    directionZ: { type: 'number', default: 1 }
   },
 
   init: function () {
@@ -21,8 +25,23 @@ AFRAME.registerComponent('fish-movement', {
     // Slight random variation, but overall very slow — increase a bit so fish can escape walls
     this.speed = this.data.speed * (0.001 + Math.random() * 0.0006);
     this.bounds = this.data.bounds;
+    this.mode = this.data.mode;
+    
+    // Mode 'flow': définir une direction initiale
+    if (this.mode === 'flow') {
+      this.flowDirection = new THREE.Vector3(
+        this.data.directionX,
+        this.data.directionY,
+        this.data.directionZ
+      ).normalize();
+      // Initialiser la vélocité dans cette direction
+      this.velocity.copy(this.flowDirection).multiplyScalar(this.speed);
+    }
+    
     this.target = new THREE.Vector3();
-    this._pickNewTarget();
+    if (this.mode === 'target') {
+      this._pickNewTarget();
+    }
     this.swayPhase = Math.random() * Math.PI * 2;
     // vertical bobbing parameters (per-fish for subtle variation)
     this.bobAmplitude = 0.003 + Math.random() * 0.006; // meters (small)
@@ -548,15 +567,31 @@ AFRAME.registerComponent('fish-movement', {
     const dt = delta / 1000;
     const pos = this.el.object3D.position;
 
-    // Si proche de la cible, choisir une nouvelle cible
-    if (pos.distanceTo(this.target) < 0.4) this._pickNewTarget();
+    // MODE FLOW: continuer dans la direction avec variations subtiles
+    if (this.mode === 'flow') {
+      // Ajouter de légères variations aléatoires pour un mouvement naturel
+      if (Math.random() < dt * 0.3) {
+        this.flowDirection.x += (Math.random() - 0.5) * 0.05;
+        this.flowDirection.y += (Math.random() - 0.5) * 0.03;
+        this.flowDirection.z += (Math.random() - 0.5) * 0.05;
+        this.flowDirection.normalize();
+      }
+      
+      // Mettre à jour la vélocité selon la direction de flow
+      this.velocity.copy(this.flowDirection).multiplyScalar(this.speed);
+    }
+    // MODE TARGET: comportement d'origine avec cible
+    else {
+      // Si proche de la cible, choisir une nouvelle cible
+      if (pos.distanceTo(this.target) < 0.4) this._pickNewTarget();
 
-    // Direction désirée vers la cible
-    const desired = this.target.clone().sub(pos).normalize();
+      // Direction désirée vers la cible
+      const desired = this.target.clone().sub(pos).normalize();
 
-    // Ajuster progressivement la vélocité vers la direction désirée (lent mais réactif)
-    const desiredVel = desired.multiplyScalar(this.speed);
-    this.velocity.lerp(desiredVel, Math.min(1, dt * 0.8));
+      // Ajuster progressivement la vélocité vers la direction désirée (lent mais réactif)
+      const desiredVel = desired.multiplyScalar(this.speed);
+      this.velocity.lerp(desiredVel, Math.min(1, dt * 0.8));
+    }
 
     // Ajouter un mouvement de nage latéral naturel (subtil et lent)
     this.swayPhase += dt * (0.35 + Math.random() * 0.2);
@@ -566,8 +601,8 @@ AFRAME.registerComponent('fish-movement', {
     // Vertical bobbing for natural up/down motion
     const verticalBob = Math.sin(this.swayPhase * 0.6 + this.bobOffset) * this.bobAmplitude;
 
-    // Occasionally adjust target.y slightly so fish change cruising altitude over time
-    if (this.roomBounds && Math.random() < dt * 0.25) {
+    // Occasionally adjust altitude (seulement en mode target)
+    if (this.mode === 'target' && this.roomBounds && Math.random() < dt * 0.25) {
       const minY = this.floorY + 0.2;
       const maxY = this.ceilingY - 0.2;
       this.target.y = Math.max(minY, Math.min(maxY, this.target.y + (Math.random() - 0.5) * 0.6));
@@ -586,12 +621,22 @@ AFRAME.registerComponent('fish-movement', {
 
     // Si collision, choisir une nouvelle cible: privilégier une fuite dirigée loin de l'obstacle
     if (wallHit || obstacleHit) {
-      if (obstacleHit && this._lastCollisionObstacle) {
-        // Si on a une information sur quel obstacle a été touché, fuir dans la direction opposée
-        this._escapeFromObstacle(this._lastCollisionObstacle, pos);
+      // En mode flow, ajuster la direction au lieu de choisir une target
+      if (this.mode === 'flow') {
+        // Inverser une composante aléatoire de la direction pour éviter l'obstacle
+        const axis = Math.floor(Math.random() * 3);
+        if (axis === 0) this.flowDirection.x *= -1;
+        else if (axis === 1) this.flowDirection.z *= -1;
+        else this.flowDirection.y = -this.flowDirection.y * 0.5;
+        this.flowDirection.normalize();
       } else {
-        // Fallback: choix aléatoire
-        this._pickNewTarget();
+        if (obstacleHit && this._lastCollisionObstacle) {
+          // Si on a une information sur quel obstacle a été touché, fuir dans la direction opposée
+          this._escapeFromObstacle(this._lastCollisionObstacle, pos);
+        } else {
+          // Fallback: choix aléatoire
+          this._pickNewTarget();
+        }
       }
 
       // Ajouter une perturbation un peu plus significative pour éviter que le poisson reste collé

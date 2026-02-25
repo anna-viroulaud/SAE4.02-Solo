@@ -27,6 +27,7 @@ AFRAME.registerComponent('room-detection', {
     this.floorPlanes = [];      // Sols (horizontal bas)
     this.ceilingPlanes = [];    // Plafonds (horizontal haut)
     this.wallPlanes = [];       // Murs (vertical)
+    this.windowPlanes = [];     // Fenêtres (vertical petit)
     this.obstaclePlanes = [];   // Obstacles (tables, meubles - horizontal milieu)
 
     // Hit-test (style du professeur)
@@ -457,6 +458,7 @@ AFRAME.registerComponent('room-detection', {
     this.floorPlanes = [];
     this.ceilingPlanes = [];
     this.wallPlanes = [];
+    this.windowPlanes = [];
     this.obstaclePlanes = [];
     this.hitSurfaces = new Map();
     this.clearPlaneVisuals();
@@ -932,10 +934,21 @@ AFRAME.registerComponent('room-detection', {
         }
       }
     } else if (plane.orientation === 'vertical') {
-      // MUR
-      this.wallPlanes.push({ plane, data: planeData });
-      if (this.data.debug) {
-        console.log(`🔷 MUR: pos=(${planeData.position.x.toFixed(2)}, ${planeData.position.z.toFixed(2)})`);
+      // Distinguer entre FENÊTRE (petite surface) et MUR (grande surface)
+      const isWindow = planeArea < 2.0; // Moins de 2m² = fenêtre
+      
+      if (isWindow) {
+        planeData.wallType = 'window';
+        this.windowPlanes.push({ plane, data: planeData });
+        if (this.data.debug) {
+          console.log(`🪟 FENÊTRE: ${planeWidth.toFixed(2)}x${planeDepth.toFixed(2)}m (${planeArea.toFixed(2)}m²)`);
+        }
+      } else {
+        planeData.wallType = 'wall';
+        this.wallPlanes.push({ plane, data: planeData });
+        if (this.data.debug) {
+          console.log(`🔷 MUR: ${planeWidth.toFixed(2)}x${planeDepth.toFixed(2)}m (${planeArea.toFixed(2)}m²)`);
+        }
       }
     }
   },
@@ -1175,6 +1188,7 @@ AFRAME.registerComponent('room-detection', {
     console.log(`\n✅ SCAN COMPLETE - ${totalPlanes} surfaces analyzed`);
     console.log(`   🟢 Sols: ${this.floorPlanes.length}`);
     console.log(`   🔷 Murs: ${this.wallPlanes.length}`);
+    console.log(`   🪟 Fenêtres: ${this.windowPlanes.length}`);
     console.log(`   🟠 Obstacles (tables, meubles): ${this.obstaclePlanes.length}`);
     console.log(`   🔵 Plafonds: ${this.ceilingPlanes.length}`);
     console.log(`   Total surfaces détectées par hit-test: ${this.hitSurfaces.size}\n`);
@@ -1340,6 +1354,7 @@ AFRAME.registerComponent('room-detection', {
       orientedBox: roomData.orientedBox || null,
       floorPlanes: this.floorPlanes,
       wallPlanes: this.wallPlanes,
+      windowPlanes: this.windowPlanes,
       obstaclePlanes: this.obstaclePlanes,
       ceilingPlanes: this.ceilingPlanes,
       allPlanes: this.detectedPlanes

@@ -25,10 +25,11 @@ AFRAME.registerComponent('window-spawner', {
   },
 
   onRoomScanned: function (data) {
-    console.log('🪟 Analyse des murs pour créer des points de spawn...');
+    console.log('🪟 Analyse des fenêtres pour créer des points de spawn...');
     
-    // Récupérer les plans verticaux (murs)
-    const wallPlanes = data.wallPlanes || [];
+    // Récupérer UNIQUEMENT les fenêtres (pas les murs pleins)
+    const windowPlanes = data.windowPlanes || [];
+    const wallPlanes = windowPlanes; // Utiliser les fenêtres au lieu de tous les murs
     
     if (wallPlanes.length === 0) {
       console.warn('⚠️ Aucun mur détecté, utilisation de positions par défaut');
@@ -85,12 +86,9 @@ AFRAME.registerComponent('window-spawner', {
       }
     });
     
-    console.log(`✅ ${this.spawnPoints.length} points de spawn créés depuis ${wallPlanes.length} murs`);
+    console.log(`✅ ${this.spawnPoints.length} points de spawn créés depuis ${wallPlanes.length} fenêtres`);
     
-    // Visualiser les points de spawn en mode debug
-    if (this.el.sceneEl.getAttribute('debug')) {
-      this.visualizeSpawnPoints();
-    }
+    // Visualisation désactivée (trop moche)
     
     this.isReady = true;
   },
@@ -285,9 +283,16 @@ AFRAME.registerComponent('window-spawner', {
     const typeName = chosen.replace('#', '');
     fish.setAttribute('data-fish-type', typeName);
     
-    // Ajouter le composant de mouvement
+    // Ajouter le composant de mouvement en mode FLOW (continue dans la direction de la fenêtre)
     const baseSpeed = 0.00001 + Math.random() * 0.00002;
-    fish.setAttribute('fish-movement', `speed: ${baseSpeed}; bounds: 2`);
+    fish.setAttribute('fish-movement', {
+      speed: baseSpeed, 
+      bounds: 2,
+      mode: 'flow',
+      directionX: spawnPoint.normal.x,
+      directionY: 0,
+      directionZ: spawnPoint.normal.z
+    });
     
     // Animation d'entrée : le poisson "nage" depuis la fenêtre (plus lente pour mieux voir)
     fish.setAttribute('animation__entry', {
@@ -296,6 +301,8 @@ AFRAME.registerComponent('window-spawner', {
       dur: 3500,
       easing: 'easeOutQuad'
     });
+    
+    // Après l'animation, le mode 'flow' prendra le relais automatiquement
     
     // Ajouter à la scène
     const container = document.querySelector('#fish-container') || this.el.sceneEl;

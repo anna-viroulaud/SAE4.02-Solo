@@ -216,7 +216,12 @@
       const endScreen3D = document.querySelector('#end-screen-3d'); if (endScreen3D) { endScreen3D.setAttribute('visible','true'); this.populateScoreTable3D(); }
 
       // show HTML end screen
-      const endGameScreen = document.getElementById('end-game-screen'); if (endGameScreen) { this.populateScoreTable(); endGameScreen.style.display = 'flex'; }
+      const endGameScreen = document.getElementById('end-game-screen'); 
+      if (endGameScreen) { 
+        this.populateScoreTable(); 
+        endGameScreen.style.display = 'flex'; 
+        endGameScreen.style.pointerEvents = 'auto'; // Activer les clics
+      }
     },
 
     saveScore: function (score) {
@@ -364,7 +369,11 @@
         }
       } catch (e) {}
       
-      const endGameScreen = document.getElementById('end-game-screen'); if (endGameScreen) endGameScreen.style.display = 'none';
+      const endGameScreen = document.getElementById('end-game-screen'); 
+      if (endGameScreen) { 
+        endGameScreen.style.display = 'none'; 
+        endGameScreen.style.pointerEvents = 'none'; // Désactiver les clics
+      }
       const endScreen3D = document.querySelector('#end-screen-3d'); if (endScreen3D) endScreen3D.setAttribute('visible','false');
       const timer3D = document.querySelector('#timer-3d'); if (timer3D) timer3D.setAttribute('visible','false');
       const timerDisplay = document.getElementById('timer-display'); if (timerDisplay) { timerDisplay.style.display = 'none'; timerDisplay.textContent = '1:00'; timerDisplay.style.color = '#FFD700'; }
