@@ -684,6 +684,7 @@ AFRAME.registerComponent('grab-manager', {
 
       // Determine fish type
       const caughtFishType = otherEl.getAttribute('data-fish-type') || otherEl.getAttribute('data-fish') || null;
+      console.log(`🎣 Caught fish type: ${caughtFishType}`);
 
       // Determine current bonus fish shown in UI (if any)
       let bonusFishType = null;
@@ -696,13 +697,19 @@ AFRAME.registerComponent('grab-manager', {
           if (typeof m === 'string') bonusFishType = m.replace('#','');
         }
       }
+      console.log(`🎯 Bonus fish type: ${bonusFishType}`);
 
       const isCorrect = (caughtFishType && bonusFishType && caughtFishType === bonusFishType) || false;
       const pointsEarned = isCorrect ? 10 : -5;
+      
+      console.log(`⚖️ Is correct: ${isCorrect}, Points earned: ${pointsEarned}`);
 
       // record to game timer
       if (window.gameTimer && window.gameTimer.isGameActive && window.gameTimer.isGameActive()) {
+        console.log(`📝 Recording fish to game timer...`);
         window.gameTimer.addCaughtFish(caughtFishType || 'unknown', isCorrect, pointsEarned);
+      } else {
+        console.warn('⚠️ Game not active or gameTimer not found');
       }
 
       // update visible score display
@@ -712,15 +719,21 @@ AFRAME.registerComponent('grab-manager', {
           const count = (window.gameTimer.getCaughtFishes && window.gameTimer.getCaughtFishes().length) || 0;
           const points = (window.gameTimer.getTotalScore && window.gameTimer.getTotalScore()) || 0;
           scoreDisplay.setAttribute('value', `Fish: ${count} | Points: ${points}`);
+          console.log(`🔄 Display updated: Fish: ${count} | Points: ${points}`);
         }
-      } catch (e) {}
+      } catch (e) {
+        console.warn('⚠️ Error updating score display:', e);
+      }
 
       // advance bonus fish if correct
       try {
         if (isCorrect && bonusFishEntity && bonusFishEntity.components && bonusFishEntity.components['fish-rotator'] && bonusFishEntity.components['fish-rotator'].nextFish) {
+          console.log('➡️ Advancing to next bonus fish');
           bonusFishEntity.components['fish-rotator'].nextFish();
         }
-      } catch (e) {}
+      } catch (e) {
+        console.warn('⚠️ Error advancing bonus fish:', e);
+      }
 
       // Play spear thrust sound (random from 3 sounds)
       try {

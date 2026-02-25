@@ -177,17 +177,6 @@ git <!DOCTYPE html>
         <!-- Cursor for mouse (desktop) and gaze interactions -->
         <a-entity cursor="rayOrigin: mouse" raycaster="objects: .clickable" position="0 0 -1"></a-entity>
         
-        <!-- Viseur de visée (crosshair) -->
-        <a-entity id="crosshair" position="0 0 -1.2">
-          <!-- Centre du viseur -->
-          <a-ring color="#00ff00" radius-inner="0.002" radius-outer="0.004" material="opacity: 0.8"></a-ring>
-          <!-- Lignes du viseur -->
-          <a-box color="#00ff00" width="0.015" height="0.002" depth="0.001" position="0 0.01 0" material="opacity: 0.7"></a-box>
-          <a-box color="#00ff00" width="0.015" height="0.002" depth="0.001" position="0 -0.01 0" material="opacity: 0.7"></a-box>
-          <a-box color="#00ff00" width="0.002" height="0.015" depth="0.001" position="0.01 0 0" material="opacity: 0.7"></a-box>
-          <a-box color="#00ff00" width="0.002" height="0.015" depth="0.001" position="-0.01 0 0" material="opacity: 0.7"></a-box>
-        </a-entity>
-        
         <a-entity id="bonus-fish" position="-0.15 0.2 -0.7" scale="0.8 0.8 0.8" visible="false">
           <a-plane color="#1a1a1a" opacity="0.9" width="0.38" height="0.28" position="0 0 -0.015"></a-plane>
           <a-box color="#FFD700" width="0.38" height="0.015" depth="0.01" position="0 0.14 0" material="metalness: 0.8; roughness: 0.2"></a-box>

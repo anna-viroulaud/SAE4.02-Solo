@@ -122,8 +122,12 @@
     },
 
     addCaughtFish: function (fishType, isCorrect, points) {
+      console.log(`🐟 Adding fish: ${fishType} (${isCorrect ? 'CORRECT' : 'INCORRECT'}) ${points >= 0 ? '+' : ''}${points}pts`);
+      
       caughtFishes.push({ type: fishType, isCorrect: isCorrect, points: points, timestamp: new Date().toLocaleTimeString() });
       totalScore += points;
+      
+      console.log(`📊 Total score updated: ${totalScore} (${caughtFishes.length} fish caught)`);
 
       // Update HUD (both HTML overlay and 3D text) when a fish is caught
       try {
@@ -132,16 +136,20 @@
         if (scoreDisplay) {
           const count = caughtFishes.length;
           scoreDisplay.setAttribute('value', `Fish: ${count} | Points: ${totalScore}`);
+          console.log(`✅ Updated 3D score display: Fish: ${count} | Points: ${totalScore}`);
         }
         if (scoreDisplayCam) {
           const count = caughtFishes.length;
           scoreDisplayCam.setAttribute('value', `Fish: ${count} | Points: ${totalScore}`);
+          console.log(`✅ Updated camera score display: Fish: ${count} | Points: ${totalScore}`);
         }
         const scoreDisplayHTML = document.getElementById('timer-display'); // reuse timer overlay for now
         if (scoreDisplayHTML) {
           // keep timer display separate; no change
         }
-      } catch (e) { /* ignore HUD update errors */ }
+      } catch (e) { 
+        console.warn('⚠️ Error updating HUD:', e); 
+      }
 
       console.log(`🐟 Fish added: ${fishType} (${isCorrect ? 'CORRECT' : 'INCORRECT'}) ${points >= 0 ? '+' : ''}${points}pts - Total: ${totalScore}`);
     },
@@ -323,18 +331,50 @@
         const r = document.createElement('tr'); r.innerHTML = `<td colspan="3" style="text-align:center;color:#999;">😢 No fish caught...</td>`; tableBody.appendChild(r); return;
       }
       console.log('✅ Displaying', caughtFishes.length, 'fishes in table');
+      
+      // Helper function to get fish display name
+      const getFishName = (type) => {
+        const fishNames = {
+          'piranha': '🐠 Piranha',
+          'goldfish': '🐟 Goldfish',
+          'thon': '🐟 Thon',
+          'thon_bleu': '🐟 Thon Bleu',
+          'unknown': '🐟 Poisson'
+        };
+        return fishNames[type] || fishNames['unknown'];
+      };
+      
       const groups = {};
-      let calcTotal = 0;
       caughtFishes.forEach(f => {
         const key = `${f.type}_${f.isCorrect ? 'correct' : 'incorrect'}`;
-        if (!groups[key]) groups[key] = { name: (f.type === 'piranha' ? '🐠 Piranha' : '🐟 Fish') + (f.isCorrect ? ' ✅' : ' ❌'), count: 0, points: 0, isCorrect: f.isCorrect };
-        groups[key].count++; groups[key].points += f.points; calcTotal += f.points;
+        if (!groups[key]) {
+          groups[key] = { 
+            name: getFishName(f.type) + (f.isCorrect ? ' ✅' : ' ❌'), 
+            count: 0, 
+            points: 0, 
+            isCorrect: f.isCorrect 
+          };
+        }
+        groups[key].count++; 
+        groups[key].points += f.points;
       });
-      totalScore = calcTotal;
+      
+      // Use the already accumulated totalScore instead of recalculating
+      console.log('📊 Total score:', totalScore);
+      
       Object.values(groups).forEach(g => {
-        const row = document.createElement('tr'); row.className = g.isCorrect ? 'correct-row' : 'incorrect-row'; const pointsColor = g.points >= 0 ? '#00ff00' : '#ff0000'; row.innerHTML = `<td>${g.name}</td><td>x ${g.count}</td><td style="color:${pointsColor}">${g.points > 0 ? '+' : ''}${g.points} pts</td>`; tableBody.appendChild(row);
+        const row = document.createElement('tr'); 
+        row.className = g.isCorrect ? 'correct-row' : 'incorrect-row'; 
+        const pointsColor = g.points >= 0 ? '#00ff00' : '#ff0000'; 
+        row.innerHTML = `<td>${g.name}</td><td>x ${g.count}</td><td style="color:${pointsColor}">${g.points > 0 ? '+' : ''}${g.points} pts</td>`; 
+        tableBody.appendChild(row);
       });
-      const totalRow = document.createElement('tr'); totalRow.className = 'total-row'; const totalColor = totalScore >= 0 ? '#FFD700' : '#ff6b6b'; totalRow.innerHTML = `<td><strong>TOTAL</strong></td><td></td><td style="color:${totalColor}"><strong>${totalScore > 0 ? '+' : ''}${totalScore} pts</strong></td>`; tableBody.appendChild(totalRow);
+      
+      const totalRow = document.createElement('tr'); 
+      totalRow.className = 'total-row'; 
+      const totalColor = totalScore >= 0 ? '#FFD700' : '#ff6b6b'; 
+      totalRow.innerHTML = `<td><strong>TOTAL</strong></td><td></td><td style="color:${totalColor}"><strong>${totalScore > 0 ? '+' : ''}${totalScore} pts</strong></td>`; 
+      tableBody.appendChild(totalRow);
     },
 
     populateScoreTable3D: function () {
@@ -344,8 +384,36 @@
       if (!caughtFishes || caughtFishes.length === 0) {
         const t = document.createElement('a-text'); t.setAttribute('id','score-list-3d'); t.setAttribute('value','No fish caught...'); t.setAttribute('align','center'); t.setAttribute('color','#999999'); t.setAttribute('width','1.8'); t.setAttribute('position','0 0 0'); endScreen3D.appendChild(t); return;
       }
+      
+      // Helper function to get fish display name
+      const getFishName = (type) => {
+        const fishNames = {
+          'piranha': '🐠 Piranha',
+          'goldfish': '🐟 Goldfish',
+          'thon': '🐟 Thon',
+          'thon_bleu': '🐟 Thon Bleu',
+          'unknown': '🐟 Poisson'
+        };
+        return fishNames[type] || fishNames['unknown'];
+      };
+      
       const tableContainer = document.createElement('a-entity'); tableContainer.setAttribute('id','dynamic-score-table-3d'); tableContainer.setAttribute('position','0 0.3 0.01');
-      const fishGroups = {}; let calcTotal = 0; caughtFishes.forEach(f=>{ const key = `${f.type}_${f.isCorrect ? 'correct' : 'incorrect'}`; if(!fishGroups[key]) fishGroups[key] = { count:0, points:0, name: (f.type==='piranha'?'🐠 Piranha':'🐟 Poisson') + (f.isCorrect?' ✅':' ❌'), isCorrect: f.isCorrect }; fishGroups[key].count++; fishGroups[key].points += f.points; calcTotal += f.points; }); totalScore = calcTotal;
+      const fishGroups = {}; 
+      caughtFishes.forEach(f=>{ 
+        const key = `${f.type}_${f.isCorrect ? 'correct' : 'incorrect'}`; 
+        if(!fishGroups[key]) {
+          fishGroups[key] = { 
+            count:0, 
+            points:0, 
+            name: getFishName(f.type) + (f.isCorrect?' ✅':' ❌'), 
+            isCorrect: f.isCorrect 
+          };
+        }
+        fishGroups[key].count++; 
+        fishGroups[key].points += f.points;
+      });
+      // Use the already accumulated totalScore instead of recalculating
+      console.log('📊 3D Total score:', totalScore);
       // headers
       const headerBg = document.createElement('a-plane'); headerBg.setAttribute('color','#FFD700'); headerBg.setAttribute('opacity','0.2'); headerBg.setAttribute('width','1.1'); headerBg.setAttribute('height','0.08'); headerBg.setAttribute('position','0 0 -0.01'); tableContainer.appendChild(headerBg);
       const header1 = document.createElement('a-text'); header1.setAttribute('value','Fish Type'); header1.setAttribute('align','left'); header1.setAttribute('color','#FFD700'); header1.setAttribute('width','1'); header1.setAttribute('position','-0.52 0 0'); tableContainer.appendChild(header1);
