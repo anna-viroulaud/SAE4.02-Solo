@@ -262,9 +262,9 @@ AFRAME.registerComponent('window-spawner', {
     const finalScale = baseScale * adjust;
     fish.setAttribute('scale', `${finalScale} ${finalScale} ${finalScale}`);
     
-    // Position de départ (légèrement à l'extérieur du mur)
+    // Position de départ (plus loin à l'extérieur du mur pour bien voir l'entrée)
     const startPos = spawnPoint.position.clone().sub(
-      spawnPoint.normal.clone().multiplyScalar(0.3)
+      spawnPoint.normal.clone().multiplyScalar(1.2)
     );
     
     // Ajouter une variation verticale aléatoire
@@ -289,11 +289,11 @@ AFRAME.registerComponent('window-spawner', {
     const baseSpeed = 0.00001 + Math.random() * 0.00002;
     fish.setAttribute('fish-movement', `speed: ${baseSpeed}; bounds: 2`);
     
-    // Animation d'entrée : le poisson "nage" depuis la fenêtre
+    // Animation d'entrée : le poisson "nage" depuis la fenêtre (plus lente pour mieux voir)
     fish.setAttribute('animation__entry', {
       property: 'position',
-      to: `${startPos.x + spawnPoint.normal.x * 0.5} ${startPos.y} ${startPos.z + spawnPoint.normal.z * 0.5}`,
-      dur: 2000,
+      to: `${startPos.x + spawnPoint.normal.x * 0.8} ${startPos.y} ${startPos.z + spawnPoint.normal.z * 0.8}`,
+      dur: 3500,
       easing: 'easeOutQuad'
     });
     

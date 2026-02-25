@@ -57,6 +57,12 @@
   // Setup simple game UI handlers (start/restart/quit)
   function initGameUI() {
     const start3D = document.querySelector('#start-button-3d');
+    // Hide the HTML High Scores button by default until the room scan completes
+    const highScoresBtnHTML = document.getElementById('high-scores-btn');
+    if (highScoresBtnHTML) {
+      highScoresBtnHTML.style.display = 'none';
+      highScoresBtnHTML.style.pointerEvents = 'none';
+    }
     const scene = document.querySelector('a-scene');
     if (start3D) {
       // Ensure hidden by default (will be shown after room-scanned)
@@ -170,13 +176,30 @@
 
       // Show the start button only after the room scan completes
       if (scene) {
+        // When entering XR, ensure HTML overlay buttons are hidden while scanning
+        scene.addEventListener('enter-vr', () => {
+          try {
+            if (highScoresBtnHTML) {
+              highScoresBtnHTML.style.display = 'none';
+              highScoresBtnHTML.style.pointerEvents = 'none';
+            }
+            const playBtnHTML = document.getElementById('play-btn');
+            if (playBtnHTML) playBtnHTML.style.display = 'none';
+          } catch (e) { /* ignore */ }
+        });
+
         scene.addEventListener('room-scanned', (ev) => {
           // Small delay to allow visuals/UI to settle
           setTimeout(() => {
             start3D.setAttribute('visible', 'true');
-            // Also show high scores button
+            // Also show high scores 3D button
             const highScores3D = document.querySelector('#high-scores-btn-3d');
             if (highScores3D) highScores3D.setAttribute('visible', 'true');
+            // Reveal the HTML high-scores button now the scan is complete
+            if (highScoresBtnHTML) {
+              highScoresBtnHTML.style.display = 'flex';
+              highScoresBtnHTML.style.pointerEvents = 'auto';
+            }
           }, 300);
         }, { once: true });
         
@@ -188,6 +211,10 @@
             start3D.setAttribute('visible', 'true');
             const highScores3D = document.querySelector('#high-scores-btn-3d');
             if (highScores3D) highScores3D.setAttribute('visible', 'true');
+            if (highScoresBtnHTML) {
+              highScoresBtnHTML.style.display = 'flex';
+              highScoresBtnHTML.style.pointerEvents = 'auto';
+            }
           }
         }, 10000);
       }
