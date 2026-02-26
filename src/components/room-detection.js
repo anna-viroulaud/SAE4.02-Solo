@@ -1059,6 +1059,10 @@ AFRAME.registerComponent('room-detection', {
 
     this.el.sceneEl.object3D.add(mesh);
     this.planeMeshes.push(mesh);
+    
+    // Créer le mesh d'occlusion pour cacher les objets virtuels derrière cette table
+    this.createOcclusionMesh(polygon, matrix, planeData);
+    
     // Marquer la visualisation comme créée pour ce plane
     planeData._visualCreated = true;
   },
@@ -1139,8 +1143,81 @@ AFRAME.registerComponent('room-detection', {
     this.el.sceneEl.object3D.add(mesh);
     this.el.sceneEl.object3D.add(wireframe);
     this.planeMeshes.push(mesh, wireframe);
+    
+    // Créer le mesh d'occlusion pour cacher les objets virtuels derrière ce plan (mur, sol, etc.)
+    this.createOcclusionMesh(polygon, matrix, planeData);
+    
     // Marquer la visualisation comme créée pour ce plane
     planeData._visualCreated = true;
+  },
+
+  // Créer un mesh d'occlusion AR invisible qui cache les objets virtuels derrière les surfaces réelles
+  createOcclusionMesh: function (polygon, matrix, planeData) {
+    if (!polygon || polygon.length < 3) return;
+
+    // Créer la géométrie du polygon
+    const shape = new THREE.Shape();
+    shape.moveTo(polygon[0].x, polygon[0].z);
+    for (let i = 1; i < polygon.length; i++) {
+      shape.lineTo(polygon[i].x, polygon[i].z);
+    }
+    shape.closePath();
+
+    const geometry = new THREE.ShapeGeometry(shape);
+    geometry.rotateX(-Math.PI / 2);
+
+    // Matériau d'occlusion spécial :
+    // - colorWrite: false = invisible (ne dessine pas de couleur)
+    // - depthWrite: true = écrit dans le depth buffer
+    // - depthTest: true = teste la profondeur
+    // Résultat : bloque le rendu des objets derrière lui sans être visible lui-même
+    const occlusionMaterial = new THREE.MeshBasicMaterial({
+      colorWrite: false,  // Ne pas dessiner de couleur (invisible)
+      depthWrite: true,   // Écrire dans le depth buffer
+      depthTest: true,    // Tester la profondeur
+      side: THREE.DoubleSide
+    });
+
+    const occlusionMesh = new THREE.Mesh(geometry, occlusionMaterial);
+    occlusionMesh.matrixAutoUpdate = false;
+    occlusionMesh.matrix.copy(matrix);
+    occlusionMesh.renderOrder = -1; // Rendu en premier
+    
+    // Marquer ce mesh comme mesh d'occlusion pour le debug
+    occlusionMesh.userData.isOcclusionMesh = true;
+    occlusionMesh.userData.planeType = planeData.obstacleType || 'surface';
+
+    this.el.sceneEl.object3D.add(occlusionMesh);
+    this.planeMeshes.push(occlusionMesh);
+    
+    if (this.data.debug) {
+      console.log(`👻 Occlusion mesh créé pour ${planeData.obstacleType || 'surface'}`);
+    }
+  },
+
+  // Créer un mesh d'occlusion sous forme de boîte (pour les murs de la pièce)
+  createOcclusionBox: function (position, width, height, depth, label = 'wall') {
+    const geometry = new THREE.BoxGeometry(width, height, depth);
+    
+    const occlusionMaterial = new THREE.MeshBasicMaterial({
+      colorWrite: false,  // Invisible
+      depthWrite: true,   // Écrit dans le depth buffer
+      depthTest: true,
+      side: THREE.DoubleSide
+    });
+
+    const occlusionMesh = new THREE.Mesh(geometry, occlusionMaterial);
+    occlusionMesh.position.set(position.x, position.y, position.z);
+    occlusionMesh.renderOrder = -1;
+    occlusionMesh.userData.isOcclusionMesh = true;
+    occlusionMesh.userData.wallType = label;
+
+    this.el.sceneEl.object3D.add(occlusionMesh);
+    this.planeMeshes.push(occlusionMesh);
+    
+    if (this.data.debug) {
+      console.log(`👻 Occlusion box créée pour ${label}`);
+    }
   },
 
   updateScanUI: function () {
@@ -1590,6 +1667,9 @@ AFRAME.registerComponent('room-detection', {
     // Wall thickness
     const wallThickness = 0.2; // Augmenté de 0.1 à 0.2 pour meilleure détection
     
+    // Sauvegarder le contexte pour utiliser dans setTimeout
+    const self = this;
+    
     // Créer les murs avec un délai pour s'assurer que physics-system est prêt
     setTimeout(() => {
       // North wall (max Z)
@@ -1605,6 +1685,11 @@ AFRAME.registerComponent('room-detection', {
       northWall.classList.add('room-boundary');
       scene.appendChild(northWall);
       console.log('   ✅ Mur Nord créé');
+      // Créer le mesh d'occlusion pour le mur nord
+      self.createOcclusionBox(
+        { x: centerX, y: centerY, z: maxZ + wallThickness/2 },
+        width, height, wallThickness, 'mur-nord'
+      );
       
       // South wall (min Z)
       const southWall = document.createElement('a-box');
@@ -1619,6 +1704,11 @@ AFRAME.registerComponent('room-detection', {
       southWall.classList.add('room-boundary');
       scene.appendChild(southWall);
       console.log('   ✅ Mur Sud créé');
+      // Créer le mesh d'occlusion pour le mur sud
+      self.createOcclusionBox(
+        { x: centerX, y: centerY, z: minZ - wallThickness/2 },
+        width, height, wallThickness, 'mur-sud'
+      );
       
       // East wall (max X)
       const eastWall = document.createElement('a-box');
@@ -1633,6 +1723,11 @@ AFRAME.registerComponent('room-detection', {
       eastWall.classList.add('room-boundary');
       scene.appendChild(eastWall);
       console.log('   ✅ Mur Est créé');
+      // Créer le mesh d'occlusion pour le mur est
+      self.createOcclusionBox(
+        { x: maxX + wallThickness/2, y: centerY, z: centerZ },
+        wallThickness, height, depth, 'mur-est'
+      );
       
       // West wall (min X)
       const westWall = document.createElement('a-box');
@@ -1647,6 +1742,11 @@ AFRAME.registerComponent('room-detection', {
       westWall.classList.add('room-boundary');
       scene.appendChild(westWall);
       console.log('   ✅ Mur Ouest créé');
+      // Créer le mesh d'occlusion pour le mur ouest
+      self.createOcclusionBox(
+        { x: minX - wallThickness/2, y: centerY, z: centerZ },
+        wallThickness, height, depth, 'mur-ouest'
+      );
       
       // Floor
       const floor = document.createElement('a-box');
@@ -1661,6 +1761,11 @@ AFRAME.registerComponent('room-detection', {
       floor.classList.add('room-boundary');
       scene.appendChild(floor);
       console.log('   ✅ Sol créé');
+      // Créer le mesh d'occlusion pour le sol
+      self.createOcclusionBox(
+        { x: centerX, y: floorY - wallThickness/2, z: centerZ },
+        width, wallThickness, depth, 'sol'
+      );
       
       // Ceiling
       const ceiling = document.createElement('a-box');
@@ -1675,6 +1780,11 @@ AFRAME.registerComponent('room-detection', {
       ceiling.classList.add('room-boundary');
       scene.appendChild(ceiling);
       console.log('   ✅ Plafond créé');
+      // Créer le mesh d'occlusion pour le plafond
+      self.createOcclusionBox(
+        { x: centerX, y: floorY + height + wallThickness/2, z: centerZ },
+        width, wallThickness, depth, 'plafond'
+      );
       
       console.log('🧱 Tous les murs physiques créés (VISIBLES pour debug)');
     }, 500); // Délai de 500ms pour s'assurer que physics-system est prêt
