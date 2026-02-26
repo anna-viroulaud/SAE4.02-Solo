@@ -317,9 +317,9 @@
         const fishNames = {
           'piranha': '🐠 Piranha',
           'goldfish': '🐟 Goldfish',
-          'thon': '🐟 Thon',
-          'thon_bleu': '🐟 Thon Bleu',
-          'unknown': '🐟 Poisson'
+          'thon': '🐟 Tuna',
+          'thon_bleu': '🐟 Bluefin Tuna',
+          'unknown': '🐟 Fish'
         };
         return fishNames[type] || fishNames['unknown'];
       };
@@ -369,9 +369,9 @@
         const fishNames = {
           'piranha': '🐠 Piranha',
           'goldfish': '🐟 Goldfish',
-          'thon': '🐟 Thon',
-          'thon_bleu': '🐟 Thon Bleu',
-          'unknown': '🐟 Poisson'
+          'thon': '🐟 Tuna',
+          'thon_bleu': '🐟 Bluefin Tuna',
+          'unknown': '🐟 Fish'
         };
         return fishNames[type] || fishNames['unknown'];
       };

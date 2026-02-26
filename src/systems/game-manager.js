@@ -8,13 +8,13 @@
 
     arButton.addEventListener('click', async function () {
       if (!navigator.xr) {
-        alert('WebXR non supporté sur ce navigateur');
+        alert('WebXR not supported on this browser');
         return;
       }
 
       const isArSupported = await navigator.xr.isSessionSupported('immersive-ar');
       if (!isArSupported) {
-        alert('Mode AR non supporté. Utilisez un Quest 3 ou un appareil compatible.');
+        alert('AR mode not supported. Use a Quest 3 or compatible device.');
         return;
       }
 
@@ -28,7 +28,7 @@
         });
 
       } catch (err) {
-        alert('Erreur: ' + err.message);
+        alert('Error: ' + err.message);
       }
     });
 
@@ -37,11 +37,11 @@
       if (navigator.xr) {
         const isArSupported = await navigator.xr.isSessionSupported('immersive-ar');
         if (!isArSupported) {
-          arButton.textContent = 'AR non disponible';
+          arButton.textContent = 'AR not available';
           arButton.disabled = true;
         }
       } else {
-        arButton.textContent = 'WebXR non supporté';
+        arButton.textContent = 'WebXR not supported';
         arButton.disabled = true;
       }
     });
@@ -375,7 +375,7 @@
       const top3 = scores.slice(0, 3);
       
       if (top3.length === 0) {
-        list.innerHTML = '<div class="no-scores">Aucun score enregistré pour le moment.<br>Jouez une partie pour commencer !</div>';
+        list.innerHTML = '<div class="no-scores">No scores recorded yet.<br>Play a game to get started!</div>';
         return;
       }
       
@@ -441,7 +441,7 @@
       
       if (top3.length === 0) {
         const noScoresText = document.createElement('a-text');
-        noScoresText.setAttribute('value', 'Aucun score enregistré.\nJouez une partie !');
+        noScoresText.setAttribute('value', 'No scores recorded yet.\nPlay a game!');
         noScoresText.setAttribute('align', 'center');
         noScoresText.setAttribute('color', '#999999');
         noScoresText.setAttribute('width', '1.2');

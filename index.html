@@ -225,13 +225,13 @@
           <a-box color="#4a90e2" width="0.02" height="0.8" depth="0.01" position="-0.45 0 0"></a-box>
           <a-box color="#4a90e2" width="0.02" height="0.8" depth="0.01" position="0.45 0 0"></a-box>
           <!-- Titre -->
-          <a-text value="🏆 Vos 3 meilleures sessions" align="center" color="#4a90e2" width="1.5" position="0 0.32 0.01"></a-text>
+          <a-text value="🏆 Your Top 3 Sessions" align="center" color="#4a90e2" width="1.5" position="0 0.32 0.01"></a-text>
           <!-- Liste des scores (remplie dynamiquement) -->
           <a-entity id="high-scores-list-3d" position="0 0.05 0.01"></a-entity>
           <!-- Bouton fermer -->
           <a-entity id="close-high-scores-3d" class="clickable" position="0 -0.3 0.01">
             <a-box class="clickable" color="#e74c3c" width="0.25" height="0.08" depth="0.02">
-              <a-text value="FERMER" align="center" anchor="center" baseline="center" color="#ffffff" width="1" position="0 0 0.015"></a-text>
+              <a-text value="CLOSE" align="center" anchor="center" baseline="center" color="#ffffff" width="1" position="0 0 0.015"></a-text>
             </a-box>
           </a-entity>
         </a-entity>
@@ -246,42 +246,38 @@
           <a-box color="#FFD700" width="0.02" height="1.0" depth="0.01" position="-0.6 0 0"></a-box>
           <a-box color="#FFD700" width="0.02" height="1.0" depth="0.01" position="0.6 0 0"></a-box>
           <!-- Titre -->
-          <a-text value="🔱 SÉLECTION D'ARME 🔱" align="center" color="#FFD700" width="1.8" position="0 0.38 0.01"></a-text>
+          <a-text value="🔱 WEAPON SELECTION 🔱" align="center" color="#FFD700" width="1.8" position="0 0.38 0.01"></a-text>
           
-          <!-- Arme 1 : Lance Basique (en haut à gauche) -->
+          <!-- Arme 1 : Spear (en haut à gauche) -->
           <a-entity id="weapon-btn-spear-model" class="clickable" position="-0.28 0.12 0.01"
                     animation__hover="property: scale; from: 1 1 1; to: 1.05 1.05 1.05; startEvents: mouseenter; dur: 150"
                     animation__leave="property: scale; from: 1.05 1.05 1.05; to: 1 1 1; startEvents: mouseleave; dur: 150">
             <a-box class="clickable" color="#2c3e50" width="0.45" height="0.18" depth="0.02"></a-box>
-            <a-text value="Lance Basique" align="center" color="#FFFFFF" width="0.8" position="0 0.04 0.015"></a-text>
-            <a-text value="⚡100%  💥100%" align="center" color="#FFD700" width="0.7" position="0 -0.03 0.015"></a-text>
+            <a-text value="🔱 Spear" align="center" color="#FFFFFF" width="0.8" position="0 0 0.015"></a-text>
           </a-entity>
           
-          <!-- Arme 2 : Lance de Bronze (en haut à droite) -->
+          <!-- Arme 2 : Dagger (en haut à droite) -->
           <a-entity id="weapon-btn-spear-level0" class="clickable" position="0.28 0.12 0.01"
                     animation__hover="property: scale; from: 1 1 1; to: 1.05 1.05 1.05; startEvents: mouseenter; dur: 150"
                     animation__leave="property: scale; from: 1.05 1.05 1.05; to: 1 1 1; startEvents: mouseleave; dur: 150">
             <a-box class="clickable" color="#2c3e50" width="0.45" height="0.18" depth="0.02"></a-box>
-            <a-text value="Lance de Bronze" align="center" color="#FFFFFF" width="0.8" position="0 0.04 0.015"></a-text>
-            <a-text value="⚡110%  💥120%" align="center" color="#FFD700" width="0.7" position="0 -0.03 0.015"></a-text>
+            <a-text value="🗡️ Dagger" align="center" color="#FFFFFF" width="0.8" position="0 0 0.015"></a-text>
           </a-entity>
           
-          <!-- Arme 3 : Lance d'Argent (en bas à gauche) -->
+          <!-- Arme 3 : Axe (en bas à gauche) -->
           <a-entity id="weapon-btn-spear-level2" class="clickable" position="-0.28 -0.12 0.01"
                     animation__hover="property: scale; from: 1 1 1; to: 1.05 1.05 1.05; startEvents: mouseenter; dur: 150"
                     animation__leave="property: scale; from: 1.05 1.05 1.05; to: 1 1 1; startEvents: mouseleave; dur: 150">
             <a-box class="clickable" color="#2c3e50" width="0.45" height="0.18" depth="0.02"></a-box>
-            <a-text value="Lance d'Argent" align="center" color="#FFFFFF" width="0.8" position="0 0.04 0.015"></a-text>
-            <a-text value="⚡120%  💥150%" align="center" color="#FFD700" width="0.7" position="0 -0.03 0.015"></a-text>
+            <a-text value="🪓 Axe" align="center" color="#FFFFFF" width="0.8" position="0 0 0.015"></a-text>
           </a-entity>
           
-          <!-- Arme 4 : Lance Légendaire (en bas à droite) -->
+          <!-- Arme 4 : Cleaver (en bas à droite) -->
           <a-entity id="weapon-btn-spear-level3" class="clickable" position="0.28 -0.12 0.01"
                     animation__hover="property: scale; from: 1 1 1; to: 1.05 1.05 1.05; startEvents: mouseenter; dur: 150"
                     animation__leave="property: scale; from: 1.05 1.05 1.05; to: 1 1 1; startEvents: mouseleave; dur: 150">
             <a-box class="clickable" color="#2c3e50" width="0.45" height="0.18" depth="0.02"></a-box>
-            <a-text value="Lance Légendaire" align="center" color="#FFFFFF" width="0.8" position="0 0.04 0.015"></a-text>
-            <a-text value="⚡150%  💥200%" align="center" color="#FFD700" width="0.7" position="0 -0.03 0.015"></a-text>
+            <a-text value="🔪 Cleaver" align="center" color="#FFFFFF" width="0.8" position="0 0 0.015"></a-text>
           </a-entity>
           
           <!-- Bouton fermer -->
@@ -289,7 +285,7 @@
                     animation__hover="property: scale; from: 1 1 1; to: 1.05 1.05 1.05; startEvents: mouseenter; dur: 150"
                     animation__leave="property: scale; from: 1.05 1.05 1.05; to: 1 1 1; startEvents: mouseleave; dur: 150">
             <a-box class="clickable" color="#e74c3c" width="0.35" height="0.1" depth="0.02">
-              <a-text value="FERMER" align="center" anchor="center" baseline="center" color="#ffffff" width="1" position="0 0 0.015"></a-text>
+              <a-text value="CLOSE" align="center" anchor="center" baseline="center" color="#ffffff" width="1" position="0 0 0.015"></a-text>
             </a-box>
           </a-entity>
         </a-entity>
@@ -307,8 +303,8 @@
           <a-box color="#FFD700" width="0.02" height="1.6" depth="0.01" position="0.6 0 0"></a-box>
 
           <!-- Titre -->
-          <a-text value="🎣 FIN DE LA PARTIE 🎣" align="center" color="#FFD700" width="1.8" position="0 0.65 0"></a-text>
-          <a-text value="Poissons attrapés" align="center" color="#FFD700" width="1.5" position="0 0.52 0"></a-text>
+          <a-text value="🎣 GAME OVER 🎣" align="center" color="#FFD700" width="1.8" position="0 0.65 0"></a-text>
+          <a-text value="Fish Caught" align="center" color="#FFD700" width="1.5" position="0 0.52 0"></a-text>
 
           <!-- Le tableau sera généré dynamiquement ici par populateScoreTable3D() -->
           <a-entity id="dynamic-score-table-3d" position="0 0 0.01"></a-entity>
@@ -317,13 +313,13 @@
           <a-box id="btn-restart-3d" class="clickable" color="#FFD700" width="0.45" height="0.12" depth="0.03" position="-0.25 -0.65 0.02"
                  animation__hover="property: scale; from: 1 1 1; to: 1.1 1.1 1.1; startEvents: mouseenter; dur: 200"
                  animation__leave="property: scale; from: 1.1 1.1 1.1; to: 1 1 1; startEvents: mouseleave; dur: 200">
-            <a-text value="🔄 REJOUER" align="center" color="#000000" width="1.2" position="0 0 0.02"></a-text>
+            <a-text value="🔄 RESTART" align="center" color="#000000" width="1.2" position="0 0 0.02"></a-text>
           </a-box>
 
           <a-box id="btn-quit-3d" class="clickable" color="#e74c3c" width="0.45" height="0.12" depth="0.03" position="0.25 -0.65 0.02"
                  animation__hover="property: scale; from: 1 1 1; to: 1.1 1.1 1.1; startEvents: mouseenter; dur: 200"
                  animation__leave="property: scale; from: 1.1 1.1 1.1; to: 1 1 1; startEvents: mouseleave; dur: 200">
-            <a-text value="❌ QUITTER" align="center" color="#ffffff" width="1.2" position="0 0 0.02"></a-text>
+            <a-text value="❌ QUIT" align="center" color="#ffffff" width="1.2" position="0 0 0.02"></a-text>
           </a-box>
         </a-entity>
 
