@@ -1,4 +1,4 @@
-// Variables globales pour partager les infos de la zone entre spawner et fish-movement
+﻿// Variables globales pour partager les infos de la zone entre spawner et fish-movement
 window.FISH_ZONE = {
   roomBounds: null,
   orientedBox: null,
@@ -70,7 +70,6 @@ AFRAME.registerComponent('fish-movement', {
     
     // Écouter la réinitialisation de la room pour permettre un nouveau spawn si nécessaire
     this.el.sceneEl.addEventListener('room-reset', () => {
-      if (this.el.sceneEl && this.el.sceneEl.is && this.el.sceneEl.is('debug')) console.debug('🐟 fish-spawner: room-reset received - resetting spawn');
       // Permettre de respawner lors d'un nouveau scan sans recharger la page
       this.spawned = false;
 
@@ -112,7 +111,6 @@ AFRAME.registerComponent('fish-movement', {
     this.floorY = floorY;
     this.ceilingY = floorY + height - 0.3;
     
-    if (this.el.sceneEl && this.el.sceneEl.is && this.el.sceneEl.is('debug')) console.debug('🐟 Fish: zone detected', this.orientedBox ? '(ORIENTED)' : '(rect)');
     
     this._ensureInBounds();
   },
@@ -125,7 +123,6 @@ AFRAME.registerComponent('fish-movement', {
     this.floorY = window.FISH_ZONE.floorY;
     this.ceilingY = window.FISH_ZONE.ceilingY;
     
-    if (this.el.sceneEl && this.el.sceneEl.is && this.el.sceneEl.is('debug')) console.debug('🐟 Fish: got global zone', this.orientedBox ? '(ORIENTED)' : '(rect)');
   },
 
   _pickNewTarget: function () {
@@ -145,7 +142,6 @@ AFRAME.registerComponent('fish-movement', {
         minZ + Math.random() * (maxZ - minZ)
       );
       
-      if (this.el.sceneEl && this.el.sceneEl.is && this.el.sceneEl.is('debug')) console.debug('🎯 New fish target:', this.target.toArray().map(v => v.toFixed(2)));
     } else {
       // Fallback: utiliser les bounds par défaut
       const b = this.bounds;
@@ -229,7 +225,6 @@ AFRAME.registerComponent('fish-movement', {
 
     // Debug: afficher coordonnées locales et limites uniquement en mode debug
     if (this.el.sceneEl && this.el.sceneEl.is && this.el.sceneEl.is('debug')) {
-      console.debug('🐟 COLLISION_DEBUG local:', { localX: localX.toFixed(2), localZ: localZ.toFixed(2), halfW: halfW.toFixed(2), halfD: halfD.toFixed(2) });
     }
     
     let correctedLocalX = localX;
@@ -243,12 +238,10 @@ AFRAME.registerComponent('fish-movement', {
       correctedLocalX = -halfW + 0.05;
       newVelLocalX = Math.abs(velLocalX) * 1.1; // bounce right
       bounced = true;
-      if (this.el.sceneEl && this.el.sceneEl.is && this.el.sceneEl.is('debug')) console.debug('🔴 Bounce LEFT (oriented) - localX:', localX.toFixed(2));
     } else if (localX > halfW) {
       correctedLocalX = halfW - 0.05;
       newVelLocalX = -Math.abs(velLocalX) * 1.1; // bounce left
       bounced = true;
-      if (this.el.sceneEl && this.el.sceneEl.is && this.el.sceneEl.is('debug')) console.debug('🔴 Bounce RIGHT (oriented) - localX:', localX.toFixed(2));
     }
     
     // Collision Z local (front/back)
@@ -256,12 +249,10 @@ AFRAME.registerComponent('fish-movement', {
       correctedLocalZ = -halfD + 0.05;
       newVelLocalZ = Math.abs(velLocalZ) * 1.1; // bounce back
       bounced = true;
-      if (this.el.sceneEl && this.el.sceneEl.is && this.el.sceneEl.is('debug')) console.debug('🔴 Bounce FRONT (oriented) - localZ:', localZ.toFixed(2));
     } else if (localZ > halfD) {
       correctedLocalZ = halfD - 0.05;
       newVelLocalZ = -Math.abs(velLocalZ) * 1.1; // bounce forward
       bounced = true;
-      if (this.el.sceneEl && this.el.sceneEl.is && this.el.sceneEl.is('debug')) console.debug('🔴 Bounce BACK (oriented) - localZ:', localZ.toFixed(2));
     }
     
     // Retransformer TOUT en coordonnées monde si collision
@@ -295,12 +286,10 @@ AFRAME.registerComponent('fish-movement', {
       this.velocity.y = Math.abs(this.velocity.y) * 1.1;
       nextPos.y = this.floorY + 0.25;
       collision = true;
-      console.debug('🔴 Rebond SOL');
     } else if (nextPos.y >= this.ceilingY - 0.2) {
       this.velocity.y = -Math.abs(this.velocity.y) * 1.1;
       nextPos.y = this.ceilingY - 0.25;
       collision = true;
-      console.debug('🔴 Rebond PLAFOND');
     }
     
     return collision;
@@ -315,12 +304,10 @@ AFRAME.registerComponent('fish-movement', {
       this.velocity.x = Math.abs(this.velocity.x) * 1.1; // Rebondir vers l'intérieur avec boost
       nextPos.x = this.roomBounds.minX + margin + 0.02; // Forcer à l'intérieur
       collision = true;
-      console.debug('🔴 Rebond mur GAUCHE - pos:', nextPos.x.toFixed(2), 'limite:', (this.roomBounds.minX + margin).toFixed(2));
     } else if (nextPos.x >= this.roomBounds.maxX - margin) {
       this.velocity.x = -Math.abs(this.velocity.x) * 1.1; // Rebondir vers l'intérieur avec boost
       nextPos.x = this.roomBounds.maxX - margin - 0.02; // Forcer à l'intérieur
       collision = true;
-      console.debug('🔴 Rebond mur DROIT - pos:', nextPos.x.toFixed(2), 'limite:', (this.roomBounds.maxX - margin).toFixed(2));
     }
     
     // Collision avec le sol et plafond
@@ -328,12 +315,10 @@ AFRAME.registerComponent('fish-movement', {
       this.velocity.y = Math.abs(this.velocity.y) * 1.1; // Rebondir vers le haut avec boost
       nextPos.y = this.floorY + 0.2 + 0.02;
       collision = true;
-      console.debug('🔴 Rebond SOL - pos:', nextPos.y.toFixed(2), 'limite:', (this.floorY + 0.2).toFixed(2));
     } else if (nextPos.y >= this.ceilingY - 0.2) {
       this.velocity.y = -Math.abs(this.velocity.y) * 1.1; // Rebondir vers le bas avec boost
       nextPos.y = this.ceilingY - 0.2 - 0.02;
       collision = true;
-      console.debug('🔴 Rebond PLAFOND - pos:', nextPos.y.toFixed(2), 'limite:', (this.ceilingY - 0.2).toFixed(2));
     }
     
     // Collision avec les murs Z
@@ -341,12 +326,10 @@ AFRAME.registerComponent('fish-movement', {
       this.velocity.z = Math.abs(this.velocity.z) * 1.1; // Rebondir vers l'avant avec boost
       nextPos.z = this.roomBounds.minZ + margin + 0.02;
       collision = true;
-      console.debug('🔴 Rebond mur ARRIÈRE - pos:', nextPos.z.toFixed(2), 'limite:', (this.roomBounds.minZ + margin).toFixed(2));
     } else if (nextPos.z >= this.roomBounds.maxZ - margin) {
       this.velocity.z = -Math.abs(this.velocity.z) * 1.1; // Rebondir vers l'arrière avec boost
       nextPos.z = this.roomBounds.maxZ - margin - 0.02;
       collision = true;
-      console.debug('🔴 Rebond mur AVANT - pos:', nextPos.z.toFixed(2), 'limite:', (this.roomBounds.maxZ - margin).toFixed(2));
     }
     
     return collision;
@@ -697,7 +680,6 @@ AFRAME.registerComponent('fish-movement', {
         
         // Si le poisson a bougé de moins de 0.1m en 3 secondes, il est coincé
         if (totalMovement < 0.1) {
-          console.warn('🐟 Poisson coincé détecté! Téléportation vers le centre...');
           this._teleportToSafePosition();
           this._lastPositions = []; // Reset l'historique
           this._stuckTeleportCount++;
@@ -748,12 +730,10 @@ AFRAME.registerComponent('fish-spawner', {
     this.ceilingY = 2.5;
     this.spawned = false;
 
-    console.debug('🐟 Fish-spawner INIT - count:', this.data.count);
 
     // Wait for room scan: store room data but defer actual spawning until startSpawn() is called
     this._pendingRoomData = null;
     this.el.sceneEl.addEventListener('room-scanned', (e) => {
-      if (this.el.sceneEl && this.el.sceneEl.is && this.el.sceneEl.is('debug')) console.debug('🔔 Fish-spawner received room-scanned — storing room data (spawn deferred until PLAY)');
       // store for later
       this._pendingRoomData = e.detail;
       // if already spawned, reposition
@@ -765,7 +745,6 @@ AFRAME.registerComponent('fish-spawner', {
     // FALLBACK: if no scan after 20s, prepare sensible default data but still defer spawning until PLAY
     setTimeout(() => {
       if (!this.spawned && !this._pendingRoomData) {
-        if (this.el.sceneEl && this.el.sceneEl.is && this.el.sceneEl.is('debug')) console.warn('⚠️ No room-scanned after 20s — using fallback room data (spawn deferred)');
         this._pendingRoomData = {
           centerX: 0,
           centerZ: -2,
@@ -778,15 +757,11 @@ AFRAME.registerComponent('fish-spawner', {
       }
     }, 20000);
 
-    console.debug('🐟 Fish-spawner: attente du scan de la pièce...');
   },
 
   _spawnFishesInRoom: function (roomData) {
-    console.debug('🚀 DÉBUT SPAWN - spawned:', this.spawned, 'count:', this.data.count);
-    console.debug('   roomData:', roomData);
     
     if (this.spawned) {
-      console.warn('⚠️ SPAWN ANNULÉ - déjà spawné !');
       return;
     }
     
@@ -794,7 +769,6 @@ AFRAME.registerComponent('fish-spawner', {
     // Track initial spawn metadata to avoid premature end-game detection
     this._initialFishCount = this.data.count || 0;
     this._spawnStartTime = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
-    console.debug('✅ Flag spawned = true');
     
     const floorY = roomData.floorY || 0;
     const height = roomData.height || 2.5;
@@ -832,14 +806,8 @@ AFRAME.registerComponent('fish-spawner', {
     // Attacher directement à la scène (coordonnées monde)
     const parent = scene;
 
-    console.debug(`🐟 Spawn de ${this.data.count} poissons dans la pièce détectée:`);
-    console.debug(`   Bounds RÉELS du sol:`);
-    console.debug(`   Limites X: ${minX.toFixed(2)} à ${maxX.toFixed(2)} (largeur: ${(maxX-minX).toFixed(2)}m)`);
-    console.debug(`   Limites Y: ${minY.toFixed(2)} à ${maxY.toFixed(2)} (hauteur: ${(maxY-minY).toFixed(2)}m)`);
-    console.debug(`   Limites Z: ${minZ.toFixed(2)} à ${maxZ.toFixed(2)} (profondeur: ${(maxZ-minZ).toFixed(2)}m)`);
     
     if (this.orientedBox) {
-      console.log(`   ✅ Zone ORIENTÉE - rotation: ${(this.orientedBox.rotationY * 180 / Math.PI).toFixed(1)}°`);
     }
 
     for (let i = 0; i < this.data.count; i++) {
@@ -902,7 +870,6 @@ AFRAME.registerComponent('fish-spawner', {
         }
         const inside = Math.abs(localX_check) <= (box.halfWidth - 0.25) && Math.abs(localZ_check) <= (box.halfDepth - 0.25);
         if (this.el.sceneEl && this.el.sceneEl.is && this.el.sceneEl.is('debug')) {
-          console.debug(`🐟 Fish #${i + 1} spawned (oriented) at (${x.toFixed(2)}, ${y.toFixed(2)}, ${z.toFixed(2)}) inside:${inside}`);
         }
       } else {
         // Spawner classique dans les bounds rectangulaires
@@ -917,7 +884,6 @@ AFRAME.registerComponent('fish-spawner', {
         y = minY + Math.random() * (maxY - minY);
 
         if (this.el.sceneEl && this.el.sceneEl.is && this.el.sceneEl.is('debug')) {
-          console.debug(`🐟 Fish #${i + 1} spawned (bounds) at (${x.toFixed(2)}, ${y.toFixed(2)}, ${z.toFixed(2)})`);
         }
       }
       // Ensure the spawn position is strictly inside the room bounds (fix fish outside zone)
@@ -925,7 +891,6 @@ AFRAME.registerComponent('fish-spawner', {
       const clamped = this._clampSpawnPosition({ x, y, z }, chosen);
       if (clamped.x !== x || clamped.y !== y || clamped.z !== z) {
         if (this.el.sceneEl && this.el.sceneEl.is && this.el.sceneEl.is('debug')) {
-          console.debug(`⚙️ Fish #${i + 1} position corrected -> (${clamped.x.toFixed(2)}, ${clamped.y.toFixed(2)}, ${clamped.z.toFixed(2)})`);
         }
       }
       fish.setAttribute('position', `${clamped.x} ${clamped.y} ${clamped.z}`);
@@ -949,14 +914,6 @@ AFRAME.registerComponent('fish-spawner', {
       this.fishes.push(fish);
     }
 
-    console.debug(`✅ ${this.fishes.length} fishes created and added to the scene.`);
-    if (this.el.sceneEl && this.el.sceneEl.is && this.el.sceneEl.is('debug')) {
-      console.debug('   Parent:', parent.id || parent.tagName);
-      console.debug('   First 3 positions:', this.fishes.slice(0, 3).map(f => {
-        const pos = f.getAttribute('position');
-        return `(${pos.x.toFixed(2)}, ${pos.y.toFixed(2)}, ${pos.z.toFixed(2)})`;
-      }));
-    }
     // Start observing remaining fish so we can end the game early when none remain
     try { this._startFishRemainingObserver(parent); } catch (e) { /* ignore */ }
   },
@@ -967,7 +924,6 @@ AFRAME.registerComponent('fish-spawner', {
       if (this._observer) this._observer.disconnect();
       const checkAndEnd = () => {
         const remaining = (parent.querySelectorAll && parent.querySelectorAll('.fish-target')) ? parent.querySelectorAll('.fish-target').length : (this.fishes ? this.fishes.length : 0);
-        if (this.el.sceneEl && this.el.sceneEl.is && this.el.sceneEl.is('debug')) console.debug('🐟 fish-spawner: remaining fish count =', remaining);
 
         // Avoid false positives right after spawn: require that the spawn has occurred and
         // a short grace period elapsed before considering the game ended due to 0 fishes.
@@ -977,7 +933,6 @@ AFRAME.registerComponent('fish-spawner', {
         if (remaining === 0 && this._initialFishCount > 0 && spawnAge > 1500) {
           // If game is active, end it (show recap like time end)
           if (window.gameTimer && window.gameTimer.isGameActive && window.gameTimer.isGameActive()) {
-            try { window.gameTimer.endGame(); } catch (e) { console.warn('fish-spawner: failed to call endGame', e); }
           }
         }
       };
@@ -1021,10 +976,6 @@ AFRAME.registerComponent('fish-spawner', {
     this.ceilingY = maxY;
 
     if (this.el.sceneEl && this.el.sceneEl.is && this.el.sceneEl.is('debug')) {
-      console.debug('🔄 Repositioning fishes to new room bounds:');
-      console.log(`   X: ${minX.toFixed(2)} to ${maxX.toFixed(2)}`);
-      console.log(`   Y: ${minY.toFixed(2)} to ${maxY.toFixed(2)}`);
-      console.log(`   Z: ${minZ.toFixed(2)} to ${maxZ.toFixed(2)}`);
     }
 
     this.fishes.forEach((fish, i) => {
@@ -1033,7 +984,6 @@ AFRAME.registerComponent('fish-spawner', {
       const y = minY + 0.2 + Math.random() * (maxY - minY - 0.4);
       const z = minZ + margin + Math.random() * (maxZ - minZ - margin * 2);
       
-      if (this.el.sceneEl && this.el.sceneEl.is && this.el.sceneEl.is('debug')) console.log(`🔄 Fish #${i + 1} repositioned to (${x.toFixed(2)}, ${y.toFixed(2)}, ${z.toFixed(2)})`);
       fish.setAttribute('position', `${x} ${y} ${z}`);
     });
   },

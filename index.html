@@ -27,7 +27,6 @@
   <script src="src/components/fish-spawner.js"></script>
   <script src="src/components/room-detection.js"></script>
   <script src="src/components/window-spawner.js"></script>
-  <script src="src/components/debug-panel.js"></script>
   <script src="src/systems/game-timer.js"></script>
   <script src="src/systems/game-manager.js"></script>
 </head>
@@ -102,14 +101,14 @@
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="white"/>
     </svg>
-    <span>Find here your<br>high score history</span>
+    <span>View your<br>best scores here</span>
   </button>
 
-  <!-- Panneau des meilleurs scores -->
+  <!-- High Scores Panel -->
   <div id="high-scores-panel" class="high-scores-panel">
     <div class="high-scores-container">
       <button class="close-btn" id="close-high-scores">✕</button>
-      <h2>🏆 Voici vos 3 meilleures sessions</h2>
+      <h2>🏆 Your Top 3 Sessions</h2>
       <div id="high-scores-list" class="scores-list"></div>
     </div>
   </div>
@@ -377,9 +376,6 @@
 
     </a-entity>
 
-    <!-- Debug Panel - Affiche les logs en VR -->
-    <a-entity debug-panel="enabled: true; followCamera: false; position: -0.8 0.3 -1.5"></a-entity>
-
     <!-- VR Hands with laser controls and raycasters to interact with 3D UI -->
     <a-entity id="leftHand" hand-controls="hand: left; handModelStyle: lowPoly; color: #15ACCF" laser-controls="hand: left" raycaster="objects: .clickable" visible="true"></a-entity>
     <a-entity id="rightHand" hand-controls="hand: right; handModelStyle: lowPoly; color: #15ACCF" laser-controls="hand: right" raycaster="objects: .clickable" visible="true"></a-entity>
@@ -404,114 +400,7 @@
   </a-scene>
 
   <script src="src/systems/game-manager.js"></script>
-  <script>
-    // Création dynamique des bulles pour un effet plus riche
-    (function() {
-      const bubblesContainer = document.querySelector('.bubbles-container');
-      if (!bubblesContainer) return;
-      
-      function createBubble() {
-        const bubble = document.createElement('div');
-        bubble.className = 'bubble';
-        bubble.style.cssText = `
-          position: absolute;
-          bottom: -100px;
-          left: ${Math.random() * 100}%;
-          width: ${Math.random() * 30 + 10}px;
-          height: ${Math.random() * 30 + 10}px;
-          background: radial-gradient(circle, rgba(255, 255, 255, 0.4) 0%, transparent 70%);
-          border-radius: 50%;
-          animation: bubbleRise ${Math.random() * 6 + 8}s ease-in forwards;
-          animation-delay: ${Math.random() * 5}s;
-          pointer-events: none;
-        `;
-        bubblesContainer.appendChild(bubble);
-        
-        // Supprimer la bulle après l'animation
-        setTimeout(() => {
-          if (bubble.parentNode) {
-            bubble.parentNode.removeChild(bubble);
-          }
-        }, (Math.random() * 6 + 8 + Math.random() * 5) * 1000);
-      }
-      
-      // Créer plusieurs bulles au démarrage
-      for (let i = 0; i < 15; i++) {
-        setTimeout(createBubble, i * 500);
-      }
-      
-      // Continuer à créer des bulles
-      setInterval(createBubble, 1500);
-    })();
-
-    // Landing page handlers
-    (function () {
-      const landingPage = document.getElementById('landing-page');
-      const playBtn = document.getElementById('play-btn')
-      const quitBtn = document.getElementById('quit-btn');
-      const scene = document.querySelector('a-scene');
-
-      // Cacher la scène initialement
-      if (scene) scene.style.display = 'none';
-
-      // Fonction pour démarrer le jeu
-      function startGame() {
-        // Cacher la landing page avec animation
-        if (landingPage) {
-          landingPage.style.opacity = '0';
-          setTimeout(() => {
-            landingPage.style.display = 'none';
-            // Afficher la scène
-            if (scene) scene.style.display = 'block';
-            
-            // Lancer WebXR après un court délai
-            setTimeout(() => {
-              // Déclencher l'entrée en mode AR/XR
-              if (scene.xrSession) {
-                scene.xrSession.end();
-              } else {
-                scene.enterAR();
-              }
-            }, 500);
-          }, 300);
-        }
-      }
-
-      // Bouton PLAY - Lance le jeu en XR
-      if (playBtn) {
-        playBtn.addEventListener('click', () => startGame());
-      }
-
-      // Bouton QUIT - Fermer l'application
-      if (quitBtn) {
-        quitBtn.addEventListener('click', () => {
-          window.close();
-        });
-      }
-    })();
-
-    // End-game overlay buttons
-    (function () {
-      const restart = document.getElementById('btn-restart');
-      const quit = document.getElementById('btn-quit');
-      const endScreen = document.getElementById('end-game-screen');
-      if (restart) restart.addEventListener('click', () => {
-        try {
-          if (window.gameTimer && window.gameTimer.resetGame) window.gameTimer.resetGame();
-          // small delay then start a fresh game (120s = 2 minutes)
-          setTimeout(() => { try { if (window.gameTimer && window.gameTimer.startGame) window.gameTimer.startGame(120); } catch(e){} }, 200);
-        } catch (e) { console.warn('restart click error', e); }
-      });
-      if (quit) quit.addEventListener('click', () => {
-        try {
-          if (window.gameTimer && window.gameTimer.resetGame) window.gameTimer.resetGame();
-        } catch (e) {}
-        // Reload page as a simple quit action to return to the launcher state
-        try { window.location.reload(); } catch (e) { if (endScreen) endScreen.style.display = 'none'; }
-      });
-    })();
-  </script>
-  <!-- Reset spear handlers removed -->
+  <script src="src/main.js"></script>
 </body>
 
 </html>

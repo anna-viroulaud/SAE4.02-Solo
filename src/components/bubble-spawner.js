@@ -1,4 +1,4 @@
-// Spawns occasional bubbles under the water within the scanned room bounds
+﻿// Spawns occasional bubbles under the water within the scanned room bounds
 AFRAME.registerComponent('bubble-spawner', {
   schema: {
     interval: { type: 'int', default: 700 }, // ms between spawn checks

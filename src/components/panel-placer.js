@@ -1,4 +1,4 @@
-// Places UI panels on detected walls in the scanned room (optional - panels stay on camera by default)
+﻿// Places UI panels on detected walls in the scanned room (optional - panels stay on camera by default)
 AFRAME.registerComponent('panel-placer', {
   schema: {
     enabled: { type: 'boolean', default: false }, // disabled by default - panels stay on camera
@@ -23,11 +23,9 @@ AFRAME.registerComponent('panel-placer', {
     this.el.sceneEl.addEventListener('room-reset', this._onReset);
 
     // Don't auto-place on init - keep panels on camera
-    console.log('panel-placer: initialized (disabled by default - panels stay on camera)');
   },
 
   resetPanelsToCamera: function () {
-    console.log('panel-placer: resetting panels to camera');
 
     const camera = document.querySelector('#head');
     if (!camera) return;
@@ -71,25 +69,20 @@ AFRAME.registerComponent('panel-placer', {
 
   placePanels: function (roomData) {
     try {
-      console.log('panel-placer: placePanels called (enabled:', this.data.enabled, ')');
 
       if (!this.data.enabled) {
-        console.log('panel-placer: disabled - panels stay on camera');
         return;
       }
 
       if (!roomData.wallPlanes || roomData.wallPlanes.length === 0) {
-        console.warn('panel-placer: No walls detected, panels will stay camera-attached');
         return;
       }
 
       this.availableWalls = roomData.wallPlanes;
-      console.log(`panel-placer: ${this.availableWalls.length} walls detected`);
 
       // Obtenir la position de la caméra pour placer les panneaux face au joueur
       const camera = document.querySelector('#head');
       if (!camera) {
-        console.warn('panel-placer: Camera not found');
         return;
       }
 
@@ -143,7 +136,6 @@ AFRAME.registerComponent('panel-placer', {
       }).filter(w => w !== null).sort((a, b) => a.distance - b.distance);
 
       if (sortedWalls.length === 0) {
-        console.warn('panel-placer: No valid walls found');
         return;
       }
 
@@ -152,7 +144,6 @@ AFRAME.registerComponent('panel-placer', {
       panelsToPlace.forEach(panelInfo => {
         const panelEl = document.getElementById(panelInfo.id);
         if (!panelEl) {
-          console.warn(`panel-placer: Panel ${panelInfo.id} not found`);
           return;
         }
 
@@ -170,17 +161,14 @@ AFRAME.registerComponent('panel-placer', {
       });
 
       this.panelsOnWalls = true;
-      console.log('panel-placer: All panels placed on walls');
 
     } catch (e) {
-      console.error('panel-placer: placement failed', e);
     }
   },
 
   // Public method to enable wall placement
   enableWallPlacement: function () {
     this.data.enabled = true;
-    console.log('panel-placer: wall placement enabled');
 
     // If room is already scanned, place panels now
     if (window.FISH_ZONE && window.FISH_ZONE.scanned && window.FISH_ZONE.wallPlanes) {
@@ -197,7 +185,6 @@ AFRAME.registerComponent('panel-placer', {
   disableWallPlacement: function () {
     this.data.enabled = false;
     this.resetPanelsToCamera();
-    console.log('panel-placer: wall placement disabled, panels back on camera');
   },
 
   _placePanel: function (panelEl, wallData, floorY, panelInfo) {
@@ -244,10 +231,8 @@ AFRAME.registerComponent('panel-placer', {
 
       this.placedPanels.push(panelEl);
 
-      console.log(`panel-placer: Placed ${panelInfo.id} on wall at`, panelPos.toArray());
 
     } catch (e) {
-      console.error('panel-placer: _placePanel failed', e);
     }
   },
 

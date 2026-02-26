@@ -1,4 +1,4 @@
-// Système de chronomètre et gestion de la fin de jeu (adapté depuis la branche score-challenge)
+﻿// Système de chronomètre et gestion de la fin de jeu (adapté depuis la branche score-challenge)
 (function () {
   let gameActive = false;
   let timeRemaining = 120; // seconds (2 minutes)
@@ -83,7 +83,6 @@
         if (timeRemaining <= 0) this.endGame();
       }, 1000);
 
-      console.log('🎮 Game started! Duration:', duration, 'seconds');
     },
 
     updateTimerDisplay: function () {
@@ -115,19 +114,16 @@
           if (clockSound) {
             clockSound.currentTime = 0;
             clockSound.volume = 0.4;
-            clockSound.play().catch(e => console.warn('Clock sound error:', e));
           }
         } catch (e) {}
       }
     },
 
     addCaughtFish: function (fishType, isCorrect, points) {
-      console.log(`🐟 Adding fish: ${fishType} (${isCorrect ? 'CORRECT' : 'INCORRECT'}) ${points >= 0 ? '+' : ''}${points}pts`);
       
       caughtFishes.push({ type: fishType, isCorrect: isCorrect, points: points, timestamp: new Date().toLocaleTimeString() });
       totalScore += points;
       
-      console.log(`📊 Total score updated: ${totalScore} (${caughtFishes.length} fish caught)`);
 
       // Update HUD (both HTML overlay and 3D text) when a fish is caught
       try {
@@ -136,29 +132,24 @@
         if (scoreDisplay) {
           const count = caughtFishes.length;
           scoreDisplay.setAttribute('value', `Fish: ${count} | Points: ${totalScore}`);
-          console.log(`✅ Updated 3D score display: Fish: ${count} | Points: ${totalScore}`);
         }
         if (scoreDisplayCam) {
           const count = caughtFishes.length;
           scoreDisplayCam.setAttribute('value', `Fish: ${count} | Points: ${totalScore}`);
-          console.log(`✅ Updated camera score display: Fish: ${count} | Points: ${totalScore}`);
         }
         const scoreDisplayHTML = document.getElementById('timer-display'); // reuse timer overlay for now
         if (scoreDisplayHTML) {
           // keep timer display separate; no change
         }
       } catch (e) { 
-        console.warn('⚠️ Error updating HUD:', e); 
       }
 
-      console.log(`🐟 Fish added: ${fishType} (${isCorrect ? 'CORRECT' : 'INCORRECT'}) ${points >= 0 ? '+' : ''}${points}pts - Total: ${totalScore}`);
     },
 
     endGame: function () {
       if (!gameActive) return; // Already ended, prevent multiple calls
       gameActive = false;
       if (timerInterval) clearInterval(timerInterval);
-      console.log('🏁 Game ended!');
       this.showEndGameScreen();
     },
 
@@ -187,7 +178,6 @@
             if (explosionSound) {
               explosionSound.currentTime = 0;
               explosionSound.volume = 0.6;
-              explosionSound.play().catch(e => console.warn('Explosion sound error:', e));
             }
           } else if (caughtFishes.length > 1) {
             // More than 1 fish caught - play win sound (random between 2 versions)
@@ -196,11 +186,9 @@
             if (winSound) {
               winSound.currentTime = 0;
               winSound.volume = 0.5;
-              winSound.play().catch(e => console.warn('Win sound error:', e));
             }
           }
         } catch (e) {
-          console.warn('Error playing end game sound:', e);
         }
       }
       
@@ -241,7 +229,6 @@
         const alreadyExists = scores.some(s => s.score === score);
         
         if (alreadyExists) {
-          console.log('💾 Score', score, 'already in top 3, not adding duplicate');
           return;
         }
         
@@ -271,9 +258,7 @@
         
         // Sauvegarder
         localStorage.setItem('spearfisher-high-scores', JSON.stringify(uniqueScores));
-        console.log('💾 Score saved:', score, '| Top 3:', uniqueScores.map(s => s.score).join(', '));
       } catch (e) {
-        console.warn('Failed to save score:', e);
       }
     },
 
@@ -286,7 +271,6 @@
         
         // Vérifier que c'est un tableau valide
         if (!Array.isArray(parsed)) {
-          console.warn('High scores data corrupted, resetting...');
           localStorage.removeItem('spearfisher-high-scores');
           return [];
         }
@@ -315,7 +299,6 @@
         
         return uniqueScores;
       } catch (e) {
-        console.warn('Error reading high scores, resetting:', e);
         localStorage.removeItem('spearfisher-high-scores');
         return [];
       }
@@ -324,13 +307,10 @@
     populateScoreTable: function () {
       const tableBody = document.getElementById('score-table-body'); if (!tableBody) return;
       tableBody.innerHTML = '';
-      console.log('📊 Populating score table - caughtFishes:', caughtFishes, 'length:', caughtFishes.length);
       // Check if we have fish caught
       if (!caughtFishes || caughtFishes.length === 0) {
-        console.log('⚠️ No fishes to display in table');
         const r = document.createElement('tr'); r.innerHTML = `<td colspan="3" style="text-align:center;color:#999;">😢 No fish caught...</td>`; tableBody.appendChild(r); return;
       }
-      console.log('✅ Displaying', caughtFishes.length, 'fishes in table');
       
       // Helper function to get fish display name
       const getFishName = (type) => {
@@ -360,7 +340,6 @@
       });
       
       // Use the already accumulated totalScore instead of recalculating
-      console.log('📊 Total score:', totalScore);
       
       Object.values(groups).forEach(g => {
         const row = document.createElement('tr'); 
@@ -413,7 +392,6 @@
         fishGroups[key].points += f.points;
       });
       // Use the already accumulated totalScore instead of recalculating
-      console.log('📊 3D Total score:', totalScore);
       // headers
       const headerBg = document.createElement('a-plane'); headerBg.setAttribute('color','#FFD700'); headerBg.setAttribute('opacity','0.2'); headerBg.setAttribute('width','1.1'); headerBg.setAttribute('height','0.08'); headerBg.setAttribute('position','0 0 -0.01'); tableContainer.appendChild(headerBg);
       const header1 = document.createElement('a-text'); header1.setAttribute('value','Fish Type'); header1.setAttribute('align','left'); header1.setAttribute('color','#FFD700'); header1.setAttribute('width','1'); header1.setAttribute('position','-0.52 0 0'); tableContainer.appendChild(header1);
@@ -456,7 +434,7 @@
         if (windowSpawner && windowSpawner.components && windowSpawner.components['window-spawner'] && windowSpawner.components['window-spawner'].stopSpawning) {
           windowSpawner.components['window-spawner'].stopSpawning();
         }
-      } catch (e) { console.warn('Failed to stop window spawner:', e); }
+      } catch (e) {}
       
       const fishTargets = document.querySelectorAll('.fish-target'); fishTargets.forEach(f => { delete f.dataset.caught; f.setAttribute('visible', 'false'); });
       
@@ -479,7 +457,6 @@
       // Réafficher le coffre s'il existe
       const chest = document.querySelector('.chest');
       if (chest) chest.setAttribute('visible', 'true');
-      console.log('🔄 Game reset (showMenuButtons:', showMenuButtons, ')');
     },
 
     isGameActive: function () { return gameActive; },
@@ -490,14 +467,11 @@
     clearHighScores: function () {
       try {
         localStorage.removeItem('spearfisher-high-scores');
-        console.log('🗑️ High scores cleared');
         return true;
       } catch (e) {
-        console.warn('Failed to clear high scores:', e);
         return false;
       }
     }
   };
 
-  console.log('✅ Game timer system loaded');
 })();

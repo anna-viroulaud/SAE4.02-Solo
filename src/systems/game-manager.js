@@ -1,4 +1,4 @@
-// Game manager system: handles UI buttons and AR session entry
+﻿// Game manager system: handles UI buttons and AR session entry
 (function () {
   // Wait until DOM ready
   function initARButton() {
@@ -27,9 +27,7 @@
           scene.removeEventListener('exit-vr', onExitAR);
         });
 
-        console.log('Mode AR activé - passthrough actif !');
       } catch (err) {
-        console.error('Erreur lors du lancement AR:', err);
         alert('Erreur: ' + err.message);
       }
     });
@@ -74,7 +72,6 @@
           if (buttonSound) {
             buttonSound.currentTime = 0;
             buttonSound.volume = 0.5;
-            buttonSound.play().catch(e => console.warn('Sound play error:', e));
           }
         } catch (e) {}
         
@@ -106,16 +103,13 @@
               if (underwaterLoop) {
                 underwaterLoop.currentTime = 0;
                 underwaterLoop.volume = 0.3;
-                underwaterLoop.play().catch(e => console.warn('Underwater loop error:', e));
               }
               const oceanWave = document.querySelector('#ocean-wave');
               if (oceanWave) {
                 oceanWave.currentTime = 0;
                 oceanWave.volume = 0.5;
-                oceanWave.play().catch(e => console.warn('Ocean wave error:', e));
               }
             } catch (e) {
-              console.warn('Error playing water sounds:', e);
             }
             
             // Prefer the water-adapter API to start the rise so it only runs once
@@ -134,7 +128,7 @@
                   water.setAttribute('animation__rise', 'property: position; to: 0 2.5 -2; dur: 10000; easing: easeInOutQuad');
                 }
               }
-            } catch (e) { console.warn('game-manager: startRise failed', e); }
+            } catch (e) {}
 
             const onAnim = (ev) => {
               try { water.removeEventListener('animationcomplete', onAnim); } catch (e) {}
@@ -150,7 +144,7 @@
                     spawner.components['fish-spawner'].startSpawn();
                   }
                 }
-              } catch (e) { console.warn('game-manager: spawn after rise failed', e); }
+              } catch (e) {}
 
               try { if (window.gameTimer && window.gameTimer.startGame) window.gameTimer.startGame(120); } catch (e) {}
             };
@@ -171,7 +165,7 @@
             } catch (e) {}
             try { if (window.gameTimer && window.gameTimer.startGame) window.gameTimer.startGame(120); } catch (e) {}
           }
-        } catch (e) { console.warn('start button handler error', e); }
+        } catch (e) {}
       });
 
       // Show the start button only after the room scan completes
@@ -207,7 +201,6 @@
         // This ensures buttons are visible even without WebXR/AR
         setTimeout(() => {
           if (!window.FISH_ZONE || !window.FISH_ZONE.scanned) {
-            console.warn('game-manager: No room scan detected - showing buttons anyway (fallback)');
             start3D.setAttribute('visible', 'true');
             const highScores3D = document.querySelector('#high-scores-btn-3d');
             if (highScores3D) highScores3D.setAttribute('visible', 'true');
@@ -228,7 +221,6 @@
         if (buttonSound) {
           buttonSound.currentTime = 0;
           buttonSound.volume = 0.5;
-          buttonSound.play().catch(e => console.warn('Sound play error:', e));
         }
       } catch (e) {}
       
@@ -243,7 +235,7 @@
               windowSpawner.components['window-spawner'].startSpawning();
             }, 500); // Petit délai pour s'assurer que le reset est complet
           }
-        } catch (e) { console.warn('Failed to restart window spawner:', e); }
+        } catch (e) {}
         window.gameTimer.startGame(120); 
       } 
     });
@@ -255,7 +247,6 @@
         if (buttonSound) {
           buttonSound.currentTime = 0;
           buttonSound.volume = 0.5;
-          buttonSound.play().catch(e => console.warn('Sound play error:', e));
         }
       } catch (e) {}
       
@@ -280,7 +271,7 @@
               windowSpawner.components['window-spawner'].startSpawning();
             }, 500);
           }
-        } catch (e) { console.warn('Failed to restart window spawner:', e); }
+        } catch (e) {}
         window.gameTimer.startGame(120); 
       } 
     });
@@ -329,18 +320,15 @@
           if (buttonSound) {
             buttonSound.currentTime = 0;
             buttonSound.volume = 0.5;
-            buttonSound.play().catch(e => console.warn('Sound play error:', e));
           }
         } catch (e) {}
         
         // Only open if game is not active and end screen is not shown
         if (window.gameTimer && window.gameTimer.isGameActive && window.gameTimer.isGameActive()) {
-          console.log('Cannot open High Scores during game');
           return;
         }
         const endGameScreen = document.getElementById('end-game-screen');
         if (endGameScreen && endGameScreen.style.display === 'flex') {
-          console.log('Cannot open High Scores during end screen');
           return;
         }
         if (highScoresPanel) {
@@ -359,7 +347,6 @@
           if (buttonSound) {
             buttonSound.currentTime = 0;
             buttonSound.volume = 0.5;
-            buttonSound.play().catch(e => console.warn('Sound play error:', e));
           }
         } catch (e) {}
         
@@ -419,12 +406,10 @@
       highScoresBtn3D.addEventListener('click', () => {
         // Only open if game is not active and end screen is not shown
         if (window.gameTimer && window.gameTimer.isGameActive && window.gameTimer.isGameActive()) {
-          console.log('Cannot open High Scores 3D during game');
           return;
         }
         const endScreen3D = document.querySelector('#end-screen-3d');
         if (endScreen3D && endScreen3D.getAttribute('visible') === 'true') {
-          console.log('Cannot open High Scores 3D during end screen');
           return;
         }
         if (highScoresPanel3D) {

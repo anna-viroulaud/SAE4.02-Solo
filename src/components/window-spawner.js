@@ -1,4 +1,4 @@
-// ============================================
+﻿// ============================================
 // COMPOSANT WINDOW-SPAWNER : Faire apparaître les poissons depuis les fenêtres/murs
 // ============================================
 
@@ -21,18 +21,15 @@ AFRAME.registerComponent('window-spawner', {
       this.onRoomScanned(e.detail);
     });
     
-    console.log('🪟 Window spawner initialisé');
   },
 
   onRoomScanned: function (data) {
-    console.log('🪟 Analyse des fenêtres pour créer des points de spawn...');
     
     // Récupérer UNIQUEMENT les fenêtres (pas les murs pleins)
     const windowPlanes = data.windowPlanes || [];
     const wallPlanes = windowPlanes; // Utiliser les fenêtres au lieu de tous les murs
     
     if (wallPlanes.length === 0) {
-      console.warn('⚠️ Aucun mur détecté, utilisation de positions par défaut');
       this.createDefaultSpawnPoints(data);
       return;
     }
@@ -86,7 +83,6 @@ AFRAME.registerComponent('window-spawner', {
       }
     });
     
-    console.log(`✅ ${this.spawnPoints.length} points de spawn créés depuis ${wallPlanes.length} fenêtres`);
     
     // Visualisation désactivée (trop moche)
     
@@ -119,7 +115,6 @@ AFRAME.registerComponent('window-spawner', {
       });
     });
     
-    console.log(`✅ ${this.spawnPoints.length} points de spawn par défaut créés`);
     this.isReady = true;
   },
   
@@ -205,17 +200,14 @@ AFRAME.registerComponent('window-spawner', {
       this.el.sceneEl.appendChild(arrow);
     });
     
-    console.log('📍 Points de spawn visualisés (sphères vertes + flèches jaunes)');
   },
   
   // Public API: démarrer le spawn (appelé depuis game-manager après l'eau qui monte)
   startSpawning: function () {
     if (!this.isReady || !this.data.enabled) {
-      console.warn('⚠️ Window spawner pas prêt ou désactivé');
       return;
     }
     
-    console.log('🐟 Démarrage du spawn automatique depuis les fenêtres');
     
     // Spawn initial de quelques poissons
     const initialCount = Math.min(5, this.data.maxFish);
@@ -235,7 +227,6 @@ AFRAME.registerComponent('window-spawner', {
   
   spawnFishFromWindow: function () {
     if (this.spawnPoints.length === 0) {
-      console.warn('⚠️ Aucun point de spawn disponible');
       return;
     }
     
@@ -314,7 +305,6 @@ AFRAME.registerComponent('window-spawner', {
       this.fishCount--;
     });
     
-    console.log(`🐟 Poisson spawné depuis fenêtre #${spawnPoint.wallIndex} (${this.fishCount}/${this.data.maxFish})`);
   },
   
   // Méthode pour arrêter le spawn et nettoyer les poissons
@@ -334,7 +324,6 @@ AFRAME.registerComponent('window-spawner', {
     });
     
     this.fishCount = 0;
-    console.log('🛑 Window spawner arrêté et poissons supprimés');
   },
   
   remove: function () {

@@ -1,4 +1,4 @@
-// Places coral models on yellow-marked visuals (tables) and environment decorations on the floor inside the scanned room
+﻿// Places coral models on yellow-marked visuals (tables) and environment decorations on the floor inside the scanned room
 AFRAME.registerComponent('coral-placer', {
   schema: {
     maxOnMarkers: { type: 'int', default: 3 },
@@ -39,7 +39,6 @@ AFRAME.registerComponent('coral-placer', {
       }, 200);
     }
     
-    console.log('coral-placer: initialized, waiting for room-scanned event');
   },
 
   clearCorals: function () {
@@ -52,22 +51,13 @@ AFRAME.registerComponent('coral-placer', {
       const scene = this.el.sceneEl;
       const rd = scene && scene.components && scene.components['room-detection'];
 
-      console.log('coral-placer: placeCorals called; planeMeshes:', rd && rd.planeMeshes ? rd.planeMeshes.length : 0);
 
       // First: place on yellow-marked visuals (planeMeshes) if available
       // Place exactly one starfish per yellow-marked visual (if any)
       // Also place corals on red-marked visuals (prefer red surfaces over floor scatter)
       let foundRed = false;
       if (rd && rd.planeMeshes && rd.planeMeshes.length > 0) {
-        for (let mesh of rd.planeMeshes) {
-          try {
-            let matDbg = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
-            const hexDbg = matDbg && matDbg.color && typeof matDbg.color.getHex === 'function' ? matDbg.color.getHex() : (matDbg && matDbg.color ? (matDbg.color & 0xffffff) : null);
-            console.log('coral-placer: planeMesh material hex=', hexDbg, 'mesh type=', mesh.type);
-          } catch (e) { console.log('coral-placer: planeMesh debug error', e); }
-        }
-
-        // iterate again for placement
+        // iterate for placement
         for (let mesh of rd.planeMeshes) {
           if (!mesh || !mesh.material) continue;
           let mat = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
@@ -92,7 +82,6 @@ AFRAME.registerComponent('coral-placer', {
             const pos = new AFRAME.THREE.Vector3();
             mesh.getWorldPosition(pos);
             pos.y += 0.06; // slightly above red surface
-            console.log('coral-placer: red surface detected but coral spawns are disabled; skipping coral for this mesh');
           }
         }
       }
@@ -102,8 +91,6 @@ AFRAME.registerComponent('coral-placer', {
       const floorArea = (maxX - minX) * (maxZ - minZ);
       const numDecor = Math.max(this.data.maxOnFloor, Math.floor(floorArea * this.data.densityFloor));
       
-      console.log(`coral-placer: scattering ${numDecor} environment decorations on floor area ${floorArea.toFixed(2)}m²`);
-      console.log(`coral-placer: floor bounds X:[${minX.toFixed(2)}, ${maxX.toFixed(2)}] Z:[${minZ.toFixed(2)}, ${maxZ.toFixed(2)}] Y:${roomData.floorY.toFixed(2)}`);
       
       // Apply safety margin to prevent decorations from spawning too close to edges
       const safetyMargin = 0.7; // Marge réduite pour zone plus petite et sécurisée
@@ -114,7 +101,6 @@ AFRAME.registerComponent('coral-placer', {
       
       // Vérifier qu'on a un espace valide
       if (safeMaxX <= safeMinX || safeMaxZ <= safeMinZ) {
-        console.warn('coral-placer: safe zone too small, skipping floor decorations');
         return;
       }
       
@@ -139,9 +125,7 @@ AFRAME.registerComponent('coral-placer', {
         }
       }
       
-      console.log(`✅ coral-placer: ${this.placed.length} decorations placed`);
     } catch (e) {
-      console.warn('coral-placer: placement failed', e);
     }
   },
 
@@ -174,11 +158,9 @@ AFRAME.registerComponent('coral-placer', {
     
     // Valider la position
     if (!isFinite(posVec3.x) || !isFinite(posVec3.y) || !isFinite(posVec3.z)) {
-      console.warn('coral-placer: invalid starfish position', posVec3.toArray());
       return;
     }
     
-    console.log('coral-placer: placing starfish at', posVec3.toArray().map(v => v.toFixed(2)));
     
     ent.setAttribute('position', `${posVec3.x.toFixed(3)} ${posVec3.y.toFixed(3)} ${posVec3.z.toFixed(3)}`);
     
@@ -190,7 +172,6 @@ AFRAME.registerComponent('coral-placer', {
     this.el.sceneEl.appendChild(ent);
     this.placed.push(ent);
     
-    console.log('✅ starfish placed:', this.placed.length);
   },
 
   _spawnCoralAt: function (posVec3, modelId, scaleMultiplier, yOffset) {
@@ -214,11 +195,9 @@ AFRAME.registerComponent('coral-placer', {
     
     // Vérifier que la position finale est valide
     if (!isFinite(posVec3.x) || !isFinite(posVec3.y) || !isFinite(posVec3.z)) {
-      console.warn('coral-placer: invalid position', posVec3.toArray());
       return;
     }
     
-    console.log('coral-placer: placing', model.replace('#', ''), 'at', posVec3.toArray().map(v => v.toFixed(2)));
     
     ent.setAttribute('position', `${posVec3.x.toFixed(3)} ${posVec3.y.toFixed(3)} ${posVec3.z.toFixed(3)}`);
     
@@ -231,7 +210,6 @@ AFRAME.registerComponent('coral-placer', {
     this.el.sceneEl.appendChild(ent);
     this.placed.push(ent);
     
-    console.log('✅ coral placed:', this.placed.length);
   },
 
   remove: function () {

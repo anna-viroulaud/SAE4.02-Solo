@@ -1,4 +1,4 @@
-// Component to make entities always face the camera (billboard effect)
+﻿// Component to make entities always face the camera (billboard effect)
 AFRAME.registerComponent('look-at-camera', {
   schema: {
     lockY: { type: 'boolean', default: true } // Keep panels upright (only rotate on Y axis)

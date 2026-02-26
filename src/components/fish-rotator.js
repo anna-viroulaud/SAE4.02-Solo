@@ -1,4 +1,4 @@
-// Composant pour faire tourner les modèles de poisson affichés dans le panneau BONUS
+﻿// Composant pour faire tourner les modèles de poisson affichés dans le panneau BONUS
 AFRAME.registerComponent('fish-rotator', {
   schema: { interval: { type: 'number', default: 10000 } },
 

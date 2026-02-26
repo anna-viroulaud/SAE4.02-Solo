@@ -1,4 +1,4 @@
-AFRAME.registerComponent('water-shader', {
+﻿AFRAME.registerComponent('water-shader', {
   schema: {
     color: { type: 'color', default: '#0077be' },
     opacity: { type: 'number', default: 0.6 },
@@ -68,7 +68,6 @@ AFRAME.registerComponent('water-shader', {
   update: function (oldData) {
     // Si les dimensions changent, recréer la géométrie
     if (this.mesh && (oldData.width !== this.data.width || oldData.depth !== this.data.depth)) {
-      console.log('💧 water-shader: Mise à jour des dimensions:', this.data.width, 'x', this.data.depth);
       
       // Disposer de l'ancienne géométrie
       this.mesh.geometry.dispose();

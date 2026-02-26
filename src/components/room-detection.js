@@ -293,6 +293,7 @@ AFRAME.registerComponent('room-detection', {
         linewidth: 2
       });
       const line = new THREE.Line(lineGeom, lineMat);
+      line.visible = false; // Masquer la visualisation
       this.el.sceneEl.object3D.add(line);
       this.planeMeshes.push(line);
     }
@@ -319,11 +320,11 @@ AFRAME.registerComponent('room-detection', {
     const shapeMesh = new THREE.Mesh(shapeGeom, shapeMat);
     shapeMesh.matrixAutoUpdate = false;
     shapeMesh.matrix.copy(matrix);
+    shapeMesh.visible = false; // Masquer la visualisation
     
     this.el.sceneEl.object3D.add(shapeMesh);
     this.planeMeshes.push(shapeMesh);
     
-    console.log('✅ Visualisation polygonale créée - suit EXACTEMENT le sol détecté');
     
     this.el.sceneEl.appendChild(container);
   },
@@ -338,6 +339,7 @@ AFRAME.registerComponent('room-detection', {
       linewidth: 3
     });
     const line = new THREE.Line(lineGeom, lineMat);
+    line.visible = false; // Masquer la visualisation
     this.el.sceneEl.object3D.add(line);
     this.planeMeshes.push(line);
   },
@@ -1026,6 +1028,7 @@ AFRAME.registerComponent('room-detection', {
     const lineSegments = new THREE.Line(lineGeometry, lineMaterial);
     lineSegments.matrixAutoUpdate = false;
     lineSegments.matrix.copy(matrix);
+    lineSegments.visible = false; // Masquer la visualisation
 
     this.el.sceneEl.object3D.add(lineSegments);
     this.planeMeshes.push(lineSegments);
@@ -1052,6 +1055,7 @@ AFRAME.registerComponent('room-detection', {
     const mesh = new THREE.Mesh(geometry, material);
     mesh.matrixAutoUpdate = false;
     mesh.matrix.copy(matrix);
+    mesh.visible = false; // Masquer la visualisation
 
     this.el.sceneEl.object3D.add(mesh);
     this.planeMeshes.push(mesh);
@@ -1130,6 +1134,8 @@ AFRAME.registerComponent('room-detection', {
     wireframe.matrixAutoUpdate = false;
     wireframe.matrix.copy(matrix);
 
+    mesh.visible = false; // Masquer la visualisation
+    wireframe.visible = false; // Masquer le contour
     this.el.sceneEl.object3D.add(mesh);
     this.el.sceneEl.object3D.add(wireframe);
     this.planeMeshes.push(mesh, wireframe);
@@ -1529,9 +1535,9 @@ AFRAME.registerComponent('room-detection', {
       box.setAttribute('height', roomHeight); // Hauteur = hauteur de la pièce
       box.setAttribute('depth', 0.3); // Épaisseur augmentée pour meilleure détection
       
-      // Rendre visible pour debug (couleur bleue transparente)
+      // Masquer la visualisation (invisible pour l'utilisateur)
       box.setAttribute('material', 'color: #0088ff; opacity: 0.3; transparent: true; wireframe: true');
-      box.setAttribute('visible', 'true');
+      box.setAttribute('visible', 'false');
     } else if (type === 'floor' || type === 'ceiling') {
       // Sol/plafond horizontal : position normale
       box.setAttribute('position', `${centerLocal.x} ${centerLocal.y} ${centerLocal.z}`);
@@ -1595,7 +1601,7 @@ AFRAME.registerComponent('room-detection', {
       northWall.setAttribute('depth', wallThickness);
       northWall.setAttribute('static-body', 'shape: box');
       northWall.setAttribute('material', 'color: #0000ff; opacity: 0.3; transparent: true; wireframe: true');
-      northWall.setAttribute('visible', 'true'); // Visible pour debug
+      northWall.setAttribute('visible', 'false'); // Masquer la visualisation
       northWall.classList.add('room-boundary');
       scene.appendChild(northWall);
       console.log('   ✅ Mur Nord créé');
@@ -1609,7 +1615,7 @@ AFRAME.registerComponent('room-detection', {
       southWall.setAttribute('depth', wallThickness);
       southWall.setAttribute('static-body', 'shape: box');
       southWall.setAttribute('material', 'color: #0000ff; opacity: 0.3; transparent: true; wireframe: true');
-      southWall.setAttribute('visible', 'true'); // Visible pour debug
+      southWall.setAttribute('visible', 'false'); // Masquer la visualisation
       southWall.classList.add('room-boundary');
       scene.appendChild(southWall);
       console.log('   ✅ Mur Sud créé');
@@ -1623,7 +1629,7 @@ AFRAME.registerComponent('room-detection', {
       eastWall.setAttribute('depth', depth);
       eastWall.setAttribute('static-body', 'shape: box');
       eastWall.setAttribute('material', 'color: #0000ff; opacity: 0.3; transparent: true; wireframe: true');
-      eastWall.setAttribute('visible', 'true'); // Visible pour debug
+      eastWall.setAttribute('visible', 'false'); // Masquer la visualisation
       eastWall.classList.add('room-boundary');
       scene.appendChild(eastWall);
       console.log('   ✅ Mur Est créé');
@@ -1637,7 +1643,7 @@ AFRAME.registerComponent('room-detection', {
       westWall.setAttribute('depth', depth);
       westWall.setAttribute('static-body', 'shape: box');
       westWall.setAttribute('material', 'color: #0000ff; opacity: 0.3; transparent: true; wireframe: true');
-      westWall.setAttribute('visible', 'true'); // Visible pour debug
+      westWall.setAttribute('visible', 'false'); // Masquer la visualisation
       westWall.classList.add('room-boundary');
       scene.appendChild(westWall);
       console.log('   ✅ Mur Ouest créé');
@@ -1651,7 +1657,7 @@ AFRAME.registerComponent('room-detection', {
       floor.setAttribute('depth', depth);
       floor.setAttribute('static-body', 'shape: box');
       floor.setAttribute('material', 'color: #00ff00; opacity: 0.2; transparent: true; wireframe: true');
-      floor.setAttribute('visible', 'true'); // Visible pour debug
+      floor.setAttribute('visible', 'false'); // Masquer la visualisation
       floor.classList.add('room-boundary');
       scene.appendChild(floor);
       console.log('   ✅ Sol créé');
@@ -1665,7 +1671,7 @@ AFRAME.registerComponent('room-detection', {
       ceiling.setAttribute('depth', depth);
       ceiling.setAttribute('static-body', 'shape: box');
       ceiling.setAttribute('material', 'color: #ffff00; opacity: 0.2; transparent: true; wireframe: true');
-      ceiling.setAttribute('visible', 'true'); // Visible pour debug
+      ceiling.setAttribute('visible', 'false'); // Masquer la visualisation
       ceiling.classList.add('room-boundary');
       scene.appendChild(ceiling);
       console.log('   ✅ Plafond créé');
