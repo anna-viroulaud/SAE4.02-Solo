@@ -7,32 +7,32 @@ AFRAME.registerComponent('chest-manager', {
   // Configuration des différentes lances
   spearConfigs: {
     'spear-model': {
-      name: 'Lance Basique',
+      name: 'Spear',
       model: '#spear-model',
       damage: 1.0,
       speed: 1.0,
-      description: 'La lance de départ'
+      description: 'Basic weapon'
     },
     'spear-level0': {
-      name: 'Lance de Bronze',
-      model: 'assets/models/spear_level0.glb',
+      name: 'Axe',
+      model: 'assets/models/low-poly_stylized_axe.glb',
       damage: 1.2,
       speed: 1.1,
-      description: 'Plus rapide et précise'
+      description: 'Fast and powerful'
     },
     'spear-level2': {
-      name: 'Lance d\'Argent',
-      model: 'assets/models/spear_level2.glb',
+      name: 'Cleaver',
+      model: 'assets/models/stylized_low-poly_cleaver.glb',
       damage: 1.5,
       speed: 1.2,
-      description: 'Dégâts augmentés'
+      description: 'Sharp damage'
     },
     'spear-level3': {
-      name: 'Lance Légendaire',
-      model: 'assets/models/spear_level3.glb',
+      name: 'Dagger',
+      model: 'assets/models/stylized_low-poly_dagger.glb',
       damage: 2.0,
       speed: 1.5,
-      description: 'La meilleure lance !'
+      description: 'Best weapon'
     }
   },
 
@@ -471,21 +471,21 @@ AFRAME.registerComponent('chest-manager', {
         let rotationValue = '0 90 0'; // Rotation par défaut
         
         if (spearId === 'spear-model') {
-          scaleValue = '0.5 0.5 0.5'; // Lance basique
-          scaleFactor = 0.5;
-          rotationValue = '0 90 0'; // Orientation normale
+          scaleValue = '0.35 0.35 0.35'; // Lance basique (réduite)
+          scaleFactor = 0.35;
+          rotationValue = '0 90 0'; // Orientation originale qui fonctionne
         } else if (spearId === 'spear-level0') {
-          scaleValue = '0.7 0.7 0.7'; // Lance level 0 (augmenté de 0.6 à 0.7)
-          scaleFactor = 0.7;
-          rotationValue = '0 0 0'; // Orientation verticale normale
+          scaleValue = '0.45 0.45 0.45'; // Hache - augmentée
+          scaleFactor = 0.45;
+          rotationValue = '0 90 0'; // Même orientation que spear
         } else if (spearId === 'spear-level2') {
-          scaleValue = '0.012 0.012 0.012'; // Lance level 2 (réduit de 0.016 à 0.012)
-          scaleFactor = 0.012;
-          rotationValue = '0 90 0'; // Orientation normale
+          scaleValue = '0.45 0.45 0.45'; // Couperet - augmenté
+          scaleFactor = 0.45;
+          rotationValue = '0 90 0'; // Même orientation que spear
         } else if (spearId === 'spear-level3') {
-          scaleValue = '0.04 0.04 0.04'; // Spear level 3
-          scaleFactor = 0.04;
-          rotationValue = '0 -90 0'; // Retourné (sens inverse)
+          scaleValue = '0.35 0.35 0.35'; // Dague - même taille que spear
+          scaleFactor = 0.35;
+          rotationValue = '0 90 0'; // Même orientation que spear
         }
         
         spearEntity.setAttribute('scale', scaleValue);
