@@ -161,7 +161,7 @@ AFRAME.registerComponent('coral-placer', {
   _spawnStarfishAt: function (posVec3) {
     // Create starfish entity (original behavior for yellow surfaces only)
     const ent = document.createElement('a-entity');
-    ent.setAttribute('gltf-model', '#starfish');
+    ent.setAttribute('gltf-model', 'assets/models/Starfish.glb');
     
     // Original starfish scale (much smaller)
     const base = this.data.scaleMin + Math.random() * (this.data.scaleMax - this.data.scaleMin);

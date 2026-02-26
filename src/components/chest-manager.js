@@ -15,21 +15,21 @@ AFRAME.registerComponent('chest-manager', {
     },
     'spear-level0': {
       name: 'Lance de Bronze',
-      model: '#spear-level0',
+      model: 'assets/models/spear_level0.glb',
       damage: 1.2,
       speed: 1.1,
       description: 'Plus rapide et précise'
     },
-    'spear-level1': {
+    'spear-level2': {
       name: 'Lance d\'Argent',
-      model: '#spear-level1',
+      model: 'assets/models/spear_level2.glb',
       damage: 1.5,
       speed: 1.2,
       description: 'Dégâts augmentés'
     },
     'spear-level3': {
       name: 'Lance Légendaire',
-      model: '#spear-level3',
+      model: 'assets/models/spear_level3.glb',
       damage: 2.0,
       speed: 1.5,
       description: 'La meilleure lance !'
@@ -146,25 +146,14 @@ AFRAME.registerComponent('chest-manager', {
 
       // Créer l'entité du coffre (visuel seulement)
       this.chestEntity = document.createElement('a-entity');
-      this.chestEntity.setAttribute('gltf-model', '#treasure-chest');
-      this.chestEntity.setAttribute('position', `${x} ${floorY + 0.1} ${z}`);
-      this.chestEntity.setAttribute('scale', '0.008 0.008 0.008');  // Taille réduite
-      this.chestEntity.setAttribute('rotation', `0 45 0`);  // Rotation fixe pour test
+      this.chestEntity.setAttribute('gltf-model', 'assets/models/Chest.glb');
+      this.chestEntity.setAttribute('position', `${x} ${floorY + 1.0} ${z}`);  // Augmenté à 1.0 pour être au niveau du sol
+      this.chestEntity.setAttribute('scale', '0.5 0.5 0.5');  // Augmenté de 0.008 à 0.5 pour le nouveau modèle Chest.glb
+      this.chestEntity.setAttribute('rotation', `0 0 0`);  // Pas de rotation
       this.chestEntity.classList.add('chest');
       this.chestEntity.setAttribute('visible', 'true');
       
       console.log('💎 📦 Chest entity created with gltf-model');
-
-      // Animation de rotation subtile
-      this.chestEntity.setAttribute('animation', {
-        property: 'rotation',
-        to: `0 405 0`,
-        dur: 20000,
-        loop: true,
-        easing: 'linear'
-      });
-      
-      console.log('💎 ⚙️ Animation added');
       
       // Glow effect PLUS GRAND pour être ultra visible
       const glow = document.createElement('a-circle');
@@ -192,7 +181,7 @@ AFRAME.registerComponent('chest-manager', {
       this.hitboxEntity.classList.add('clickable');
       this.hitboxEntity.classList.add('chest-hitbox');
       this.hitboxEntity.classList.add('chest'); // Aussi classe "chest" pour être caché avec le visuel
-      this.hitboxEntity.setAttribute('position', `${x} ${floorY + 0.25} ${z}`); // Position absolue
+      this.hitboxEntity.setAttribute('position', `${x} ${floorY + 1.0} ${z}`); // Position absolue - aligné avec le coffre
       
       const hitbox = document.createElement('a-box');
       hitbox.classList.add('clickable');
@@ -200,9 +189,8 @@ AFRAME.registerComponent('chest-manager', {
       hitbox.setAttribute('height', '0.8'); // PLUS GRAND !
       hitbox.setAttribute('depth', '0.8'); // PLUS GRAND !
       hitbox.setAttribute('position', '0 0 0'); // Position relative par rapport au parent
-      // TEMPORAIREMENT VISIBLE pour le debug - OPAQUE pour être sûr que le raycaster le détecte
-      hitbox.setAttribute('material', 'color: #00FF00; opacity: 0.8; transparent: true; side: double');
-      hitbox.setAttribute('visible', 'true');
+      // Hitbox complètement invisible
+      hitbox.setAttribute('visible', 'false');
       
       console.log('💎 Hitbox créée avec structure comme les boutons');
       console.log('💎 Parent classList:', this.hitboxEntity.classList);
@@ -333,7 +321,7 @@ AFRAME.registerComponent('chest-manager', {
     const weaponButtons = [
       { id: 'weapon-btn-spear-model', spearId: 'spear-model' },
       { id: 'weapon-btn-spear-level0', spearId: 'spear-level0' },
-      { id: 'weapon-btn-spear-level1', spearId: 'spear-level1' },
+      { id: 'weapon-btn-spear-level2', spearId: 'spear-level2' },
       { id: 'weapon-btn-spear-level3', spearId: 'spear-level3' }
     ];
     
@@ -427,7 +415,7 @@ AFRAME.registerComponent('chest-manager', {
       const weaponButtons = [
         { id: 'weapon-btn-spear-model', spearId: 'spear-model' },
         { id: 'weapon-btn-spear-level0', spearId: 'spear-level0' },
-        { id: 'weapon-btn-spear-level1', spearId: 'spear-level1' },
+        { id: 'weapon-btn-spear-level2', spearId: 'spear-level2' },
         { id: 'weapon-btn-spear-level3', spearId: 'spear-level3' }
       ];
       
@@ -487,17 +475,17 @@ AFRAME.registerComponent('chest-manager', {
           scaleFactor = 0.5;
           rotationValue = '0 90 0'; // Orientation normale
         } else if (spearId === 'spear-level0') {
-          scaleValue = '0.6 0.6 0.6'; // Lance level 0 (réduit de 0.8 à 0.6 pour mieux tenir)
-          scaleFactor = 0.6;
-          rotationValue = '0 -90 0'; // Inversée sur Y
-        } else if (spearId === 'spear-level1') {
-          scaleValue = '8.0 8.0 8.0'; // Lance level 1 (très grande)
-          scaleFactor = 8.0;
+          scaleValue = '0.7 0.7 0.7'; // Lance level 0 (augmenté de 0.6 à 0.7)
+          scaleFactor = 0.7;
+          rotationValue = '0 0 0'; // Orientation verticale normale
+        } else if (spearId === 'spear-level2') {
+          scaleValue = '0.012 0.012 0.012'; // Lance level 2 (réduit de 0.016 à 0.012)
+          scaleFactor = 0.012;
           rotationValue = '0 90 0'; // Orientation normale
         } else if (spearId === 'spear-level3') {
           scaleValue = '0.04 0.04 0.04'; // Spear level 3
           scaleFactor = 0.04;
-          rotationValue = '0 -90 0'; // Inversée sur Y
+          rotationValue = '0 -90 0'; // Retourné (sens inverse)
         }
         
         spearEntity.setAttribute('scale', scaleValue);
@@ -520,10 +508,10 @@ AFRAME.registerComponent('chest-manager', {
         const baseSphereRadius = 0.18;
         let adjustedRadius;
         
-        if (spearId === 'spear-level1') {
-          // Pour spear-level1, utiliser une valeur fixe TRÈS petite (0.01m = 1cm)
+        if (spearId === 'spear-level2') {
+          // Pour spear-level2, utiliser une valeur fixe TRÈS petite (0.01m = 1cm)
           adjustedRadius = 0.01;
-          console.log('⚔️ Sphere radius FIXE pour level1 (1cm):', adjustedRadius);
+          console.log('⚔️ Sphere radius FIXE pour level2 (1cm):', adjustedRadius);
         } else if (spearId === 'spear-level0') {
           // Pour spear-level0, rayon un peu plus petit pour mieux tenir en main
           adjustedRadius = baseSphereRadius * (scaleFactor / 0.5) * 0.8;

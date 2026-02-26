@@ -1,4 +1,4 @@
-git <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 
 <head>
@@ -136,45 +136,44 @@ git <!DOCTYPE html>
     </div>
   </div>
 
-  <!-- Scène A-Frame avec configuration WebXR native pour AR -->
+  <!-- Scène A-Frame avec configuration WebXR native pour AR - optimisée -->
   <a-scene webxr="referenceSpaceType: local-floor; overlayElement: #ar-overlay; requiredFeatures: local-floor, hit-test, plane-detection, mesh-detection; optionalFeatures: depth-sensing, anchors;" room-detection="enableTest: true"
     grab-manager
     physics="gravity: 0"
-    fog="type: exponential; color: #001a33; density: 0.02"
-    renderer="colorManagement: true; alpha: true; antialias: true; sortTransparentObjects: true">
+    fog="type: exponential; color: #001a33; density: 0.015"
+    renderer="colorManagement: true; antialias: true; alpha: true">
 
     <a-assets>
-      <!-- Spear models (different levels) -->
+      <!-- Spear models - Only small base spear preloaded, others lazy-loaded -->
       <a-asset-item id="spear-model" src="assets/models/stylized_low-poly_spear.glb"></a-asset-item>
-      <a-asset-item id="spear-level0" src="assets/models/spear_level0.glb"></a-asset-item>
-      <a-asset-item id="spear-level1" src="assets/models/spear_level1.glb"></a-asset-item>
-      <a-asset-item id="spear-level3" src="assets/models/spear_level3.glb"></a-asset-item>
-      <!-- Treasure chest for weapon selection -->
-      <a-asset-item id="treasure-chest" src="assets/models/treasure_chest.glb"></a-asset-item>
-      <!-- Fish models -->
+      <!-- LAZY-LOADED (not in assets): spear_level0 (3.87MB), spear_level2 (4.62MB), spear_level3 (15.94MB) -->
+      <!-- LAZY-LOADED (not in assets): treasure_chest (10.08MB) -->
+      
+      <!-- Fish models - Keep small ones preloaded for spawning -->
       <a-asset-item id="goldfish" src="assets/models/Goldfish.glb"></a-asset-item>
       <a-asset-item id="piranha" src="assets/models/Piranha.glb"></a-asset-item>
       <a-asset-item id="thon" src="assets/models/thon.glb"></a-asset-item>
       <a-asset-item id="thon_bleu" src="assets/models/thon_bleu.glb"></a-asset-item>
-      <a-asset-item id="starfish" src="assets/models/Starfish.glb"></a-asset-item>
-      <!-- Environment decoration models -->
+      <!-- LAZY-LOADED (not in assets): starfish (3.30MB) -->
+      
+      <!-- Environment decoration models - Keep small ones -->
       <a-asset-item id="coral-red" src="assets/models/Coral-red.glb"></a-asset-item>
       <a-asset-item id="grass" src="assets/models/Grass.glb"></a-asset-item>
       <a-asset-item id="rock" src="assets/models/Rock.glb"></a-asset-item>
       <a-asset-item id="rocks" src="assets/models/Rocks.glb"></a-asset-item>
       <a-asset-item id="vine" src="assets/models/Vine.glb"></a-asset-item>
       <a-asset-item id="underwater-coral" src="assets/models/underwater_enviro_coral.glb"></a-asset-item>
-      <!-- Sound effects -->
-      <audio id="spear-thrust-1" src="assets/son/yodguard-spear_thrust-1-382402.mp3" preload="auto"></audio>
-      <audio id="spear-thrust-2" src="assets/son/yodguard-spear_thrust-2-382404.mp3" preload="auto"></audio>
-      <audio id="spear-thrust-3" src="assets/son/yodguard-spear_thrust-3-382407.mp3" preload="auto"></audio>
-      <audio id="clock-ticking" src="assets/son/reddog0607-clock-ticking-365218.mp3" preload="auto"></audio>
+      <!-- Sound effects - optimisés pour le chargement -->
+      <audio id="spear-thrust-1" src="assets/son/yodguard-spear_thrust-1-382402.mp3" preload="metadata"></audio>
+      <audio id="spear-thrust-2" src="assets/son/yodguard-spear_thrust-2-382404.mp3" preload="metadata"></audio>
+      <audio id="spear-thrust-3" src="assets/son/yodguard-spear_thrust-3-382407.mp3" preload="metadata"></audio>
+      <audio id="clock-ticking" src="assets/son/reddog0607-clock-ticking-365218.mp3" preload="metadata"></audio>
       <audio id="underwater-loop" src="assets/son/freesound_community-underwater-loop-amb-6182.mp3" preload="auto" loop></audio>
-      <audio id="win-sound-1" src="assets/son/floraphonic-you-win-sequence-1-183948.mp3" preload="auto"></audio>
-      <audio id="win-sound-2" src="assets/son/floraphonic-you-win-sequence-2-183949.mp3" preload="auto"></audio>
+      <audio id="win-sound-1" src="assets/son/floraphonic-you-win-sequence-1-183948.mp3" preload="none"></audio>
+      <audio id="win-sound-2" src="assets/son/floraphonic-you-win-sequence-2-183949.mp3" preload="none"></audio>
       <audio id="button-press" src="assets/son/dragon-studio-button-press-382713.mp3" preload="auto"></audio>
-      <audio id="explosion" src="assets/son/daviddumaisaudio-large-underwater-explosion-190270.mp3" preload="auto"></audio>
-      <audio id="ocean-wave" src="assets/son/freesound_community-ocean-wave-100271.mp3" preload="auto"></audio>
+      <audio id="explosion" src="assets/son/daviddumaisaudio-large-underwater-explosion-190270.mp3" preload="none"></audio>
+      <audio id="ocean-wave" src="assets/son/freesound_community-ocean-wave-100271.mp3" preload="none"></audio>
     </a-assets>
 
     <!-- Ancre monde : tous les objets 3D sont enfants de cette entité pour rester fixes dans l'espace réel -->
@@ -269,7 +268,7 @@ git <!DOCTYPE html>
           </a-entity>
           
           <!-- Arme 3 : Lance d'Argent (en bas à gauche) -->
-          <a-entity id="weapon-btn-spear-level1" class="clickable" position="-0.28 -0.12 0.01"
+          <a-entity id="weapon-btn-spear-level2" class="clickable" position="-0.28 -0.12 0.01"
                     animation__hover="property: scale; from: 1 1 1; to: 1.05 1.05 1.05; startEvents: mouseenter; dur: 150"
                     animation__leave="property: scale; from: 1.05 1.05 1.05; to: 1 1 1; startEvents: mouseleave; dur: 150">
             <a-box class="clickable" color="#2c3e50" width="0.45" height="0.18" depth="0.02"></a-box>
@@ -370,8 +369,8 @@ git <!DOCTYPE html>
       <!-- Panel placer: optionally place UI panels on detected walls (disabled by default) -->
       <a-entity id="panel-placer" panel-placer="enabled: false"></a-entity>
 
-      <!-- Window spawner: spawn fish from detected windows/walls -->
-      <a-entity id="window-spawner" window-spawner="enabled: true; spawnInterval: 8000; maxFish: 15"></a-entity>
+      <!-- Window spawner: spawn fish from detected windows/walls - optimisé -->
+      <a-entity id="window-spawner" window-spawner="enabled: true; spawnInterval: 8000; maxFish: 8"></a-entity>
 
       <!-- Container pour les poissons -->
       <a-entity id="fish-container"></a-entity>
