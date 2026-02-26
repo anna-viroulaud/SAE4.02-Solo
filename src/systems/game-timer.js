@@ -1,10 +1,11 @@
-// Système de chronomètre et gestion de la fin de jeu (adapté depuis la branche score-challenge)
+﻿// Système de chronomètre et gestion de la fin de jeu (adapté depuis la branche score-challenge)
 (function () {
   let gameActive = false;
-  let timeRemaining = 60; // seconds
+  let timeRemaining = 120; // seconds (2 minutes)
   let caughtFishes = [];
   let totalScore = 0;
   let timerInterval = null;
+  let endGameSoundPlayed = false; // Flag to ensure end game sound plays only once
 
   function formatTime(sec) {
     const minutes = Math.floor(sec / 60);
@@ -13,11 +14,23 @@
   }
 
   window.gameTimer = {
-    startGame: function (duration = 60) {
+    startGame: function (duration = 120) {
       gameActive = true;
       timeRemaining = duration;
       caughtFishes = [];
       totalScore = 0;
+
+      // hide AR and High Scores buttons during game
+      const arOverlay = document.getElementById('ar-overlay');
+      if (arOverlay) arOverlay.style.display = 'none';
+      const highScoresBtn = document.getElementById('high-scores-btn');
+      if (highScoresBtn) {
+        highScoresBtn.style.display = 'none';
+        highScoresBtn.style.pointerEvents = 'none';
+      }
+      // hide High Scores panel if open
+      const highScoresPanel = document.getElementById('high-scores-panel');
+      if (highScoresPanel) highScoresPanel.style.display = 'none';
 
       // show HTML timer
       const timerDisplay = document.getElementById('timer-display');
@@ -25,17 +38,24 @@
 
       // show 3D timer
       const timer3D = document.querySelector('#timer-3d');
+      const timer3DWorld = document.querySelector('#timer-3d-world');
       if (timer3D) timer3D.setAttribute('visible', 'true');
+      if (timer3DWorld) timer3DWorld.setAttribute('visible', 'true');
 
       // show bonus panel
-      const bonusFish = document.querySelector('#bonus-fish');
+      const bonusFish = document.querySelector('#bonus-fish-world');
+      const bonusFishCam = document.querySelector('#bonus-fish');
       if (bonusFish) bonusFish.setAttribute('visible', 'true');
+      if (bonusFishCam) bonusFishCam.setAttribute('visible', 'true');
 
       // show score display in VR
-      const scoreDisplay = document.querySelector('#score-display');
+      const scoreDisplay = document.querySelector('#score-display-world');
+      const scoreDisplayCam = document.querySelector('#score-display');
       if (scoreDisplay) scoreDisplay.setAttribute('visible', 'true');
+      if (scoreDisplayCam) scoreDisplayCam.setAttribute('visible', 'true');
       // initialize score display value
       if (scoreDisplay) scoreDisplay.setAttribute('value', 'Fish: 0 | Points: 0');
+      if (scoreDisplayCam) scoreDisplayCam.setAttribute('value', 'Fish: 0 | Points: 0');
 
       // show water and bubbles if present
       const waterSurface = document.querySelector('#water-surface');
@@ -63,7 +83,6 @@
         if (timeRemaining <= 0) this.endGame();
       }, 1000);
 
-      console.log('🎮 Game started! Duration:', duration, 'seconds');
     },
 
     updateTimerDisplay: function () {
@@ -76,82 +95,303 @@
         // Toggle warning class to enable pulse animation
         if (timeRemaining <= 15) timerDisplay.classList.add('warning'); else timerDisplay.classList.remove('warning');
       }
-      const timerText3D = document.querySelector('#timer-text');
+      const timerText3D = document.querySelector('#timer-text-world');
+      const timerText3DCam = document.querySelector('#timer-text');
       if (timerText3D) {
         timerText3D.setAttribute('value', t);
         // also change 3D text color when <= 15s
         try { timerText3D.setAttribute('color', timeRemaining <= 15 ? '#e74c3c' : '#FFD700'); } catch (e) {}
       }
+      if (timerText3DCam) {
+        timerText3DCam.setAttribute('value', t);
+        try { timerText3DCam.setAttribute('color', timeRemaining <= 15 ? '#e74c3c' : '#FFD700'); } catch (e) {}
+      }
+      
+      // Play clock ticking sound at 15 seconds
+      if (timeRemaining === 15) {
+        try {
+          const clockSound = document.querySelector('#clock-ticking');
+          if (clockSound) {
+            clockSound.currentTime = 0;
+            clockSound.volume = 0.4;
+          }
+        } catch (e) {}
+      }
     },
 
     addCaughtFish: function (fishType, isCorrect, points) {
+      
       caughtFishes.push({ type: fishType, isCorrect: isCorrect, points: points, timestamp: new Date().toLocaleTimeString() });
       totalScore += points;
+      
 
       // Update HUD (both HTML overlay and 3D text) when a fish is caught
       try {
-        const scoreDisplay = document.querySelector('#score-display');
+        const scoreDisplay = document.querySelector('#score-display-world');
+        const scoreDisplayCam = document.querySelector('#score-display');
         if (scoreDisplay) {
           const count = caughtFishes.length;
           scoreDisplay.setAttribute('value', `Fish: ${count} | Points: ${totalScore}`);
+        }
+        if (scoreDisplayCam) {
+          const count = caughtFishes.length;
+          scoreDisplayCam.setAttribute('value', `Fish: ${count} | Points: ${totalScore}`);
         }
         const scoreDisplayHTML = document.getElementById('timer-display'); // reuse timer overlay for now
         if (scoreDisplayHTML) {
           // keep timer display separate; no change
         }
-      } catch (e) { /* ignore HUD update errors */ }
+      } catch (e) { 
+      }
 
-      console.log(`🐟 Fish added: ${fishType} (${isCorrect ? 'CORRECT' : 'INCORRECT'}) ${points >= 0 ? '+' : ''}${points}pts - Total: ${totalScore}`);
     },
 
     endGame: function () {
+      if (!gameActive) return; // Already ended, prevent multiple calls
       gameActive = false;
       if (timerInterval) clearInterval(timerInterval);
-      console.log('🏁 Game ended!');
       this.showEndGameScreen();
     },
 
     showEndGameScreen: function () {
+      // Save score to localStorage (seulement si score > 0 ou partie jouée)
+      if (totalScore !== 0 || caughtFishes.length > 0) {
+        this.saveScore(totalScore);
+      }
+      
+      // Stop underwater loop if playing
+      try {
+        const underwaterLoop = document.querySelector('#underwater-loop');
+        if (underwaterLoop) {
+          underwaterLoop.pause();
+          underwaterLoop.currentTime = 0;
+        }
+      } catch (e) {}
+      
+      // Play end game sound based on fish caught (only once)
+      if (!endGameSoundPlayed) {
+        endGameSoundPlayed = true;
+        try {
+          if (caughtFishes.length === 0) {
+            // No fish caught - play explosion
+            const explosionSound = document.querySelector('#explosion');
+            if (explosionSound) {
+              explosionSound.currentTime = 0;
+              explosionSound.volume = 0.6;
+            }
+          } else if (caughtFishes.length > 1) {
+            // More than 1 fish caught - play win sound (random between 2 versions)
+            const soundIndex = Math.random() < 0.5 ? 1 : 2;
+            const winSound = document.querySelector(`#win-sound-${soundIndex}`);
+            if (winSound) {
+              winSound.currentTime = 0;
+              winSound.volume = 0.5;
+            }
+          }
+        } catch (e) {
+        }
+      }
+      
       // hide timers and bonus
       const timer3D = document.querySelector('#timer-3d'); if (timer3D) timer3D.setAttribute('visible', 'false');
+      const timer3DWorld = document.querySelector('#timer-3d-world'); if (timer3DWorld) timer3DWorld.setAttribute('visible', 'false');
       const bonusFish = document.querySelector('#bonus-fish'); if (bonusFish) bonusFish.setAttribute('visible', 'false');
+      const bonusFishWorld = document.querySelector('#bonus-fish-world'); if (bonusFishWorld) bonusFishWorld.setAttribute('visible', 'false');
       const scoreDisplay = document.querySelector('#score-display'); if (scoreDisplay) scoreDisplay.setAttribute('visible', 'false');
+      const scoreDisplayWorld = document.querySelector('#score-display-world'); if (scoreDisplayWorld) scoreDisplayWorld.setAttribute('visible', 'false');
+
+      // hide AR button and High Scores button during end screen
+      const arOverlay = document.getElementById('ar-overlay'); if (arOverlay) arOverlay.style.display = 'none';
+      const highScoresBtn = document.getElementById('high-scores-btn'); 
+      if (highScoresBtn) { 
+        highScoresBtn.style.display = 'none'; 
+        highScoresBtn.style.pointerEvents = 'none'; 
+      }
 
       // show 3D end screen
       const endScreen3D = document.querySelector('#end-screen-3d'); if (endScreen3D) { endScreen3D.setAttribute('visible','true'); this.populateScoreTable3D(); }
 
       // show HTML end screen
-      const endGameScreen = document.getElementById('end-game-screen'); if (endGameScreen) { this.populateScoreTable(); endGameScreen.style.display = 'flex'; }
+      const endGameScreen = document.getElementById('end-game-screen'); 
+      if (endGameScreen) { 
+        this.populateScoreTable(); 
+        endGameScreen.style.display = 'flex'; 
+        endGameScreen.style.pointerEvents = 'auto'; // Activer les clics
+      }
+    },
+
+    saveScore: function (score) {
+      try {
+        // Récupérer les scores existants
+        let scores = this.getHighScores();
+        
+        // Vérifier si ce score existe déjà (éviter les doublons de même valeur)
+        const alreadyExists = scores.some(s => s.score === score);
+        
+        if (alreadyExists) {
+          return;
+        }
+        
+        // Créer le nouveau score
+        const newScore = {
+          score: score,
+          date: new Date().toLocaleString('fr-FR'),
+          timestamp: Date.now()
+        };
+        
+        // Ajouter le nouveau score
+        scores.push(newScore);
+        
+        // Trier par score décroissant
+        scores.sort((a, b) => b.score - a.score);
+        
+        // Garder seulement les 3 meilleurs scores (avec valeurs différentes)
+        const uniqueScores = [];
+        const seenValues = new Set();
+        for (const s of scores) {
+          if (!seenValues.has(s.score)) {
+            seenValues.add(s.score);
+            uniqueScores.push(s);
+            if (uniqueScores.length >= 3) break;
+          }
+        }
+        
+        // Sauvegarder
+        localStorage.setItem('spearfisher-high-scores', JSON.stringify(uniqueScores));
+      } catch (e) {
+      }
+    },
+
+    getHighScores: function () {
+      try {
+        const stored = localStorage.getItem('spearfisher-high-scores');
+        if (!stored) return [];
+        
+        const parsed = JSON.parse(stored);
+        
+        // Vérifier que c'est un tableau valide
+        if (!Array.isArray(parsed)) {
+          localStorage.removeItem('spearfisher-high-scores');
+          return [];
+        }
+        
+        // Filtrer les scores valides et les trier
+        const validScores = parsed.filter(s => 
+          s && 
+          typeof s.score === 'number' && 
+          !isNaN(s.score) &&
+          s.date
+        );
+        
+        // Trier par score décroissant
+        validScores.sort((a, b) => b.score - a.score);
+        
+        // Garder seulement les scores avec des valeurs DIFFÉRENTES (pas de doublons)
+        const uniqueScores = [];
+        const seenValues = new Set();
+        for (const s of validScores) {
+          if (!seenValues.has(s.score)) {
+            seenValues.add(s.score);
+            uniqueScores.push(s);
+            if (uniqueScores.length >= 3) break;
+          }
+        }
+        
+        return uniqueScores;
+      } catch (e) {
+        localStorage.removeItem('spearfisher-high-scores');
+        return [];
+      }
     },
 
     populateScoreTable: function () {
       const tableBody = document.getElementById('score-table-body'); if (!tableBody) return;
       tableBody.innerHTML = '';
-      if (caughtFishes.length === 0) {
+      // Check if we have fish caught
+      if (!caughtFishes || caughtFishes.length === 0) {
         const r = document.createElement('tr'); r.innerHTML = `<td colspan="3" style="text-align:center;color:#999;">😢 No fish caught...</td>`; tableBody.appendChild(r); return;
       }
+      
+      // Helper function to get fish display name
+      const getFishName = (type) => {
+        const fishNames = {
+          'piranha': '🐠 Piranha',
+          'goldfish': '🐟 Goldfish',
+          'thon': '🐟 Thon',
+          'thon_bleu': '🐟 Thon Bleu',
+          'unknown': '🐟 Poisson'
+        };
+        return fishNames[type] || fishNames['unknown'];
+      };
+      
       const groups = {};
-      let calcTotal = 0;
       caughtFishes.forEach(f => {
         const key = `${f.type}_${f.isCorrect ? 'correct' : 'incorrect'}`;
-        if (!groups[key]) groups[key] = { name: (f.type === 'piranha' ? '🐠 Piranha' : '🐟 Fish') + (f.isCorrect ? ' ✅' : ' ❌'), count: 0, points: 0, isCorrect: f.isCorrect };
-        groups[key].count++; groups[key].points += f.points; calcTotal += f.points;
+        if (!groups[key]) {
+          groups[key] = { 
+            name: getFishName(f.type) + (f.isCorrect ? ' ✅' : ' ❌'), 
+            count: 0, 
+            points: 0, 
+            isCorrect: f.isCorrect 
+          };
+        }
+        groups[key].count++; 
+        groups[key].points += f.points;
       });
-      totalScore = calcTotal;
+      
+      // Use the already accumulated totalScore instead of recalculating
+      
       Object.values(groups).forEach(g => {
-        const row = document.createElement('tr'); row.className = g.isCorrect ? 'correct-row' : 'incorrect-row'; const pointsColor = g.points >= 0 ? '#00ff00' : '#ff0000'; row.innerHTML = `<td>${g.name}</td><td>x ${g.count}</td><td style="color:${pointsColor}">${g.points > 0 ? '+' : ''}${g.points} pts</td>`; tableBody.appendChild(row);
+        const row = document.createElement('tr'); 
+        row.className = g.isCorrect ? 'correct-row' : 'incorrect-row'; 
+        const pointsColor = g.points >= 0 ? '#00ff00' : '#ff0000'; 
+        row.innerHTML = `<td>${g.name}</td><td>x ${g.count}</td><td style="color:${pointsColor}">${g.points > 0 ? '+' : ''}${g.points} pts</td>`; 
+        tableBody.appendChild(row);
       });
-      const totalRow = document.createElement('tr'); totalRow.className = 'total-row'; const totalColor = totalScore >= 0 ? '#FFD700' : '#ff6b6b'; totalRow.innerHTML = `<td><strong>TOTAL</strong></td><td></td><td style="color:${totalColor}"><strong>${totalScore > 0 ? '+' : ''}${totalScore} pts</strong></td>`; tableBody.appendChild(totalRow);
+      
+      const totalRow = document.createElement('tr'); 
+      totalRow.className = 'total-row'; 
+      const totalColor = totalScore >= 0 ? '#FFD700' : '#ff6b6b'; 
+      totalRow.innerHTML = `<td><strong>TOTAL</strong></td><td></td><td style="color:${totalColor}"><strong>${totalScore > 0 ? '+' : ''}${totalScore} pts</strong></td>`; 
+      tableBody.appendChild(totalRow);
     },
 
     populateScoreTable3D: function () {
       const endScreen3D = document.querySelector('#end-screen-3d'); if (!endScreen3D) return;
       const old = document.querySelector('#dynamic-score-table-3d'); if (old) old.parentNode.removeChild(old);
-      if (caughtFishes.length === 0) {
+      // Check if we have fish caught
+      if (!caughtFishes || caughtFishes.length === 0) {
         const t = document.createElement('a-text'); t.setAttribute('id','score-list-3d'); t.setAttribute('value','No fish caught...'); t.setAttribute('align','center'); t.setAttribute('color','#999999'); t.setAttribute('width','1.8'); t.setAttribute('position','0 0 0'); endScreen3D.appendChild(t); return;
       }
+      
+      // Helper function to get fish display name
+      const getFishName = (type) => {
+        const fishNames = {
+          'piranha': '🐠 Piranha',
+          'goldfish': '🐟 Goldfish',
+          'thon': '🐟 Thon',
+          'thon_bleu': '🐟 Thon Bleu',
+          'unknown': '🐟 Poisson'
+        };
+        return fishNames[type] || fishNames['unknown'];
+      };
+      
       const tableContainer = document.createElement('a-entity'); tableContainer.setAttribute('id','dynamic-score-table-3d'); tableContainer.setAttribute('position','0 0.3 0.01');
-      const fishGroups = {}; let calcTotal = 0; caughtFishes.forEach(f=>{ const key = `${f.type}_${f.isCorrect ? 'correct' : 'incorrect'}`; if(!fishGroups[key]) fishGroups[key] = { count:0, points:0, name: (f.type==='piranha'?'🐠 Piranha':'🐟 Poisson') + (f.isCorrect?' ✅':' ❌'), isCorrect: f.isCorrect }; fishGroups[key].count++; fishGroups[key].points += f.points; calcTotal += f.points; }); totalScore = calcTotal;
+      const fishGroups = {}; 
+      caughtFishes.forEach(f=>{ 
+        const key = `${f.type}_${f.isCorrect ? 'correct' : 'incorrect'}`; 
+        if(!fishGroups[key]) {
+          fishGroups[key] = { 
+            count:0, 
+            points:0, 
+            name: getFishName(f.type) + (f.isCorrect?' ✅':' ❌'), 
+            isCorrect: f.isCorrect 
+          };
+        }
+        fishGroups[key].count++; 
+        fishGroups[key].points += f.points;
+      });
+      // Use the already accumulated totalScore instead of recalculating
       // headers
       const headerBg = document.createElement('a-plane'); headerBg.setAttribute('color','#FFD700'); headerBg.setAttribute('opacity','0.2'); headerBg.setAttribute('width','1.1'); headerBg.setAttribute('height','0.08'); headerBg.setAttribute('position','0 0 -0.01'); tableContainer.appendChild(headerBg);
       const header1 = document.createElement('a-text'); header1.setAttribute('value','Fish Type'); header1.setAttribute('align','left'); header1.setAttribute('color','#FFD700'); header1.setAttribute('width','1'); header1.setAttribute('position','-0.52 0 0'); tableContainer.appendChild(header1);
@@ -163,23 +403,75 @@
       endScreen3D.appendChild(tableContainer);
     },
 
-    resetGame: function () {
-      gameActive = false; if (timerInterval) clearInterval(timerInterval); timeRemaining = 60; caughtFishes = []; totalScore = 0;
-      const endGameScreen = document.getElementById('end-game-screen'); if (endGameScreen) endGameScreen.style.display = 'none';
+    resetGame: function (showMenuButtons = true) {
+      gameActive = false; if (timerInterval) clearInterval(timerInterval); timeRemaining = 120; caughtFishes = []; totalScore = 0; endGameSoundPlayed = false;
+      
+      // Stop and reset underwater loop to prevent it from playing in next game
+      try {
+        const underwaterLoop = document.querySelector('#underwater-loop');
+        if (underwaterLoop) {
+          underwaterLoop.pause();
+          underwaterLoop.currentTime = 0;
+        }
+      } catch (e) {}
+      
+      const endGameScreen = document.getElementById('end-game-screen'); 
+      if (endGameScreen) { 
+        endGameScreen.style.display = 'none'; 
+        endGameScreen.style.pointerEvents = 'none'; // Désactiver les clics
+      }
       const endScreen3D = document.querySelector('#end-screen-3d'); if (endScreen3D) endScreen3D.setAttribute('visible','false');
       const timer3D = document.querySelector('#timer-3d'); if (timer3D) timer3D.setAttribute('visible','false');
-      const timerDisplay = document.getElementById('timer-display'); if (timerDisplay) { timerDisplay.style.display = 'none'; timerDisplay.textContent = '1:00'; timerDisplay.style.color = '#FFD700'; }
-      const timerText3D = document.querySelector('#timer-text'); if (timerText3D) { timerText3D.setAttribute('value','1:00'); timerText3D.setAttribute('color','#FFD700'); }
-      const scoreDisplayReset = document.querySelector('#score-display'); if (scoreDisplayReset) scoreDisplayReset.setAttribute('value','Fish: 0 | Points: 0');
+      const timerDisplay = document.getElementById('timer-display'); if (timerDisplay) { timerDisplay.style.display = 'none'; timerDisplay.textContent = '2:00'; timerDisplay.style.color = '#FFD700'; }
+      const timerText3D = document.querySelector('#timer-text'); if (timerText3D) { timerText3D.setAttribute('value','2:00'); timerText3D.setAttribute('color','#FFD700'); }
+      const scoreDisplayReset = document.querySelector('#score-display-world'); if (scoreDisplayReset) scoreDisplayReset.setAttribute('value','Fish: 0 | Points: 0');
+      const scoreDisplayResetCam = document.querySelector('#score-display'); if (scoreDisplayResetCam) scoreDisplayResetCam.setAttribute('value','Fish: 0 | Points: 0');
       const grabManager = document.querySelector('[grab-manager]'); if (grabManager && grabManager.components && grabManager.components['grab-manager']) { grabManager.components['grab-manager'].fishCaught = 0; grabManager.components['grab-manager'].points = 0; }
+      
+      // Arrêter le window-spawner et supprimer les poissons existants
+      try {
+        const windowSpawner = document.querySelector('[window-spawner]');
+        if (windowSpawner && windowSpawner.components && windowSpawner.components['window-spawner'] && windowSpawner.components['window-spawner'].stopSpawning) {
+          windowSpawner.components['window-spawner'].stopSpawning();
+        }
+      } catch (e) {}
+      
       const fishTargets = document.querySelectorAll('.fish-target'); fishTargets.forEach(f => { delete f.dataset.caught; f.setAttribute('visible', 'false'); });
-      console.log('🔄 Game reset');
+      
+      // SEULEMENT afficher les boutons si on retourne au menu (pas lors d'un restart)
+      if (showMenuButtons) {
+        // show AR and High Scores buttons again when returning to menu
+        const arOverlay = document.getElementById('ar-overlay'); if (arOverlay) arOverlay.style.display = 'flex';
+        const highScoresBtn = document.getElementById('high-scores-btn'); 
+        if (highScoresBtn) { 
+          highScoresBtn.style.display = 'flex'; 
+          highScoresBtn.style.pointerEvents = 'auto'; 
+        }
+        // Réafficher les boutons 3D (start et high scores)
+        const startBtn3D = document.querySelector('#start-button-3d');
+        if (startBtn3D && window.FISH_ZONE && window.FISH_ZONE.scanned) startBtn3D.setAttribute('visible', 'true');
+        const highScoresBtn3D = document.querySelector('#high-scores-btn-3d');
+        if (highScoresBtn3D && window.FISH_ZONE && window.FISH_ZONE.scanned) highScoresBtn3D.setAttribute('visible', 'true');
+      }
+      
+      // Réafficher le coffre s'il existe
+      const chest = document.querySelector('.chest');
+      if (chest) chest.setAttribute('visible', 'true');
     },
 
     isGameActive: function () { return gameActive; },
     getCaughtFishes: function () { return caughtFishes; },
-    getTotalScore: function () { return totalScore; }
+    getTotalScore: function () { return totalScore; },
+    
+    // Fonction pour effacer tous les scores (utile si scores corrompus)
+    clearHighScores: function () {
+      try {
+        localStorage.removeItem('spearfisher-high-scores');
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
   };
 
-  console.log('✅ Game timer system loaded');
 })();

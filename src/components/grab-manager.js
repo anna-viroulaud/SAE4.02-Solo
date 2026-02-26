@@ -88,21 +88,53 @@ AFRAME.registerComponent('grab-manager', {
     const scene = this.el.sceneEl;
     
     // Wait for scene load
+    // Attach listeners when scene is loaded; also support late controller connections
     scene.addEventListener('loaded', () => {
-      // Support both hand-controls and platform-specific controller components
-      const hands = scene.querySelectorAll('a-entity[hand-controls], a-entity[oculus-touch-controls]');
-      console.log('✅ Grab manager found hands:', hands.length);
-      
-      hands.forEach((hand) => {
-        hand.addEventListener('triggerdown', () => {
-          this.tryGrab(hand);
-        });
-        
-        hand.addEventListener('triggerup', () => {
-          this.tryRelease(hand);
-        });
-      });
+      this.attachToHands();
     });
+
+    // If controllers connect after load, attach to them as well
+    scene.addEventListener('controllerconnected', (ev) => {
+      try {
+        const hand = ev.detail && ev.detail.component ? ev.target : ev.target;
+        if (hand) this.attachToHand(hand);
+      } catch (e) {}
+    });
+
+    // Fallback: poll for hands for a short time (useful in some browsers/platforms)
+    let tries = 0;
+    const poll = setInterval(() => {
+      tries++;
+      this.attachToHands();
+      if (tries > 6) clearInterval(poll);
+    }, 1000);
+  },
+
+  attachToHands: function () {
+    const scene = this.el.sceneEl;
+    if (!scene) return;
+    const hands = scene.querySelectorAll('a-entity[hand-controls], a-entity[oculus-touch-controls]');
+    // console.log('grab-manager: attachToHands check, found', hands.length);
+    hands.forEach(h => this.attachToHand(h));
+  },
+
+  attachToHand: function (hand) {
+    if (!hand || hand._grabAttached) return;
+    try {
+      const downHandler = () => this.tryGrab(hand);
+      const upHandler = () => this.tryRelease(hand);
+      hand.addEventListener('triggerdown', downHandler);
+      hand.addEventListener('triggerup', upHandler);
+      // also support grip events as alternative input
+      hand.addEventListener('gripdown', downHandler);
+      hand.addEventListener('gripup', upHandler);
+      // mark attached so we don't double-add
+      hand._grabAttached = true;
+      hand._grabHandlers = { downHandler, upHandler };
+      console.log('🎣 grab-manager: attached handlers to hand', hand.id || hand);
+    } catch (e) {
+      console.warn('grab-manager: failed to attach to hand', e);
+    }
   },
 
   tryGrab: function (hand) {
@@ -176,17 +208,21 @@ AFRAME.registerComponent('grab-manager', {
           el.object3D.getWorldQuaternion(worldQuat);
           const forward = forwardLocal.applyQuaternion(worldQuat).normalize();
 
+          // Récupérer les stats de l'arme si disponibles
+          const weaponStats = (window.WEAPON_STATS && window.WEAPON_STATS.current) || { speed: 1.0, damage: 1.0 };
+          const speedMultiplier = weaponStats.speed || 1.0;
+
           // softer launch: prefer last hand velocity (reduced), otherwise gentle forward speed
           let speedVec = new AFRAME.THREE.Vector3();
           if (this.lastHandVel && this.lastHandVel.length() > 0.02) {
-            speedVec.copy(this.lastHandVel).multiplyScalar(0.6 * this.data.throwPower);
+            speedVec.copy(this.lastHandVel).multiplyScalar(0.6 * this.data.throwPower * speedMultiplier);
           } else {
             // gentle forward speed when hand movement low
-            speedVec.copy(forward).multiplyScalar(1.2 * this.data.throwPower);
+            speedVec.copy(forward).multiplyScalar(1.2 * this.data.throwPower * speedMultiplier);
           }
 
-          // Clamp speed to avoid flying away
-          const maxSpeed = Math.max(0.1, this.data.maxLaunchSpeed);
+          // Clamp speed to avoid flying away (ajusté par les stats de l'arme)
+          const maxSpeed = Math.max(0.1, this.data.maxLaunchSpeed * speedMultiplier);
           const speedLen = speedVec.length();
           if (speedLen > maxSpeed) {
             speedVec.multiplyScalar(maxSpeed / speedLen);
@@ -238,6 +274,8 @@ AFRAME.registerComponent('grab-manager', {
                   }
                 } catch (e) { /* ignore */ }
               }
+              // Enforce spawn-zone bounds each tether tick
+              try { if (this.enforceEntityInsideSpawnZone) this.enforceEntityInsideSpawnZone(el); } catch(e) {}
 
               if (now - tetherStart < tetherDur) requestAnimationFrame(tetherStep);
             };
@@ -334,6 +372,8 @@ AFRAME.registerComponent('grab-manager', {
                       }
                     }
                   } catch(e) {}
+                  // Enforce spawn-zone bounds during scripted tether
+                  try { if (this.enforceEntityInsideSpawnZone) this.enforceEntityInsideSpawnZone(el); } catch(e) {}
                 }
                 if (now - tetherStart < tetherDur) requestAnimationFrame(tetherStep);
               };
@@ -367,14 +407,16 @@ AFRAME.registerComponent('grab-manager', {
     const step = (now) => {
       const t = Math.min(1, (now - startTime) / duration);
       const currentPos = startPos.clone().lerp(targetPos, t);
+      // Clamp scripted launch to spawn zone
+      const clampedPos = (this.clampToSpawnZone) ? this.clampToSpawnZone(currentPos) : currentPos;
 
       // set world position respecting parent transform
       const parentObj = el.object3D.parent;
       if (parentObj) {
-        const localPos = parentObj.worldToLocal(currentPos.clone());
+        const localPos = parentObj.worldToLocal(clampedPos.clone());
         el.object3D.position.copy(localPos);
       } else {
-        el.object3D.position.copy(currentPos);
+        el.object3D.position.copy(clampedPos);
       }
 
       // compute spear tip and check collision
@@ -423,10 +465,111 @@ AFRAME.registerComponent('grab-manager', {
     requestAnimationFrame(step);
   },
 
+  // Clamp a world position inside the spawn-zone bounding box if present.
+  // Returns a new Vector3 (clamped world position) or the original if no box.
+  clampToSpawnZone: function (worldPos) {
+    const THREE = AFRAME.THREE;
+    try {
+      const boxEl = document.querySelector('#spawn-zone-bounds');
+      if (!boxEl || !boxEl.object3D) return worldPos;
+
+      // Ensure matrixWorld is up to date
+      boxEl.object3D.updateMatrixWorld(true);
+
+      // Transform world pos into box local space
+      const inv = new THREE.Matrix4().copy(boxEl.object3D.matrixWorld).invert();
+      const local = worldPos.clone().applyMatrix4(inv);
+
+      // Read box dimensions (A-Frame stores them as attributes on a-box)
+      const width = parseFloat(boxEl.getAttribute('width')) || (boxEl.object3D.scale.x || 1);
+      const height = parseFloat(boxEl.getAttribute('height')) || (boxEl.object3D.scale.y || 1);
+      const depth = parseFloat(boxEl.getAttribute('depth')) || (boxEl.object3D.scale.z || 1);
+      const halfW = width / 2; const halfH = height / 2; const halfD = depth / 2;
+
+      // Clamp in local box space
+      local.x = Math.max(-halfW, Math.min(halfW, local.x));
+      local.y = Math.max(-halfH, Math.min(halfH, local.y));
+      local.z = Math.max(-halfD, Math.min(halfD, local.z));
+
+      // Transform back to world
+      const clampedWorld = local.applyMatrix4(boxEl.object3D.matrixWorld);
+      return clampedWorld;
+    } catch (e) { return worldPos; }
+  },
+
+  // Ensure an entity stays inside the spawn zone: move its object3D or physics body to the clamped position.
+  enforceEntityInsideSpawnZone: function (el) {
+    if (!el) return;
+    const THREE = AFRAME.THREE;
+    try {
+      const worldPos = new THREE.Vector3();
+      el.object3D.getWorldPosition(worldPos);
+      const clamped = this.clampToSpawnZone(worldPos);
+      // If unchanged, nothing to do
+      if (clamped.distanceTo(worldPos) < 0.001) return;
+
+      // Apply clamped position: prefer physics body if present
+      if (el.body) {
+        try {
+          if (el.body.position && typeof el.body.position.set === 'function') {
+            el.body.position.set(clamped.x, clamped.y, clamped.z);
+          } else if (el.body.position) {
+            el.body.position.x = clamped.x; el.body.position.y = clamped.y; el.body.position.z = clamped.z;
+          }
+          // zero velocity to avoid re-exit
+          if (el.body.velocity && typeof el.body.velocity.set === 'function') el.body.velocity.set(0,0,0);
+          else if (el.body.velocity) { el.body.velocity.x = 0; el.body.velocity.y = 0; el.body.velocity.z = 0; }
+        } catch (e) { /* ignore physics set errors */ }
+      }
+
+      // fallback to set object3D position
+      try {
+        const parent = el.object3D.parent;
+        if (parent) {
+          const local = parent.worldToLocal(clamped.clone());
+          el.object3D.position.copy(local);
+        } else {
+          el.object3D.position.copy(clamped);
+        }
+      } catch (e) {}
+    } catch (e) {}
+  },
+
   tick: function () {
     if (!this.grabbedSpear || !this.grabbingHand) return;
 
     const THREE = AFRAME.THREE;
+
+    // Vérifier que l'arme est toujours kinematic (empêche les fuites)
+    try {
+      if (this.grabbedSpear.body) {
+        // S'assurer que le body reste kinematic pendant qu'on tient l'arme
+        if (this.grabbedSpear.body.type !== 2) { // 2 = KINEMATIC in CANNON.js
+          this.grabbedSpear.body.type = 2;
+          this.grabbedSpear.body.mass = 0;
+          this.grabbedSpear.body.updateMassProperties();
+        }
+        // Réinitialiser la vélocité pour éviter les dérives
+        if (this.grabbedSpear.body.velocity) {
+          if (typeof this.grabbedSpear.body.velocity.set === 'function') {
+            this.grabbedSpear.body.velocity.set(0, 0, 0);
+          } else {
+            this.grabbedSpear.body.velocity.x = 0;
+            this.grabbedSpear.body.velocity.y = 0;
+            this.grabbedSpear.body.velocity.z = 0;
+          }
+        }
+        if (this.grabbedSpear.body.angularVelocity) {
+          if (typeof this.grabbedSpear.body.angularVelocity.set === 'function') {
+            this.grabbedSpear.body.angularVelocity.set(0, 0, 0);
+          } else {
+            this.grabbedSpear.body.angularVelocity.x = 0;
+            this.grabbedSpear.body.angularVelocity.y = 0;
+            this.grabbedSpear.body.angularVelocity.z = 0;
+          }
+        }
+      }
+    } catch (e) { /* ignore */ }
 
     // Get hand world position and rotation
     const handPos = new THREE.Vector3();
@@ -461,6 +604,9 @@ AFRAME.registerComponent('grab-manager', {
     const offsetWorld = currentOffset.clone().applyQuaternion(handQuat);
     const targetPos = handPos.clone().add(offsetWorld);
 
+    // Clamp the target position to the spawn zone (prevents weapon leaving detection area)
+    const clampedTarget = this.clampToSpawnZone ? this.clampToSpawnZone(targetPos) : targetPos;
+
     // Compute desired rotation: base on hand then flip on Y
     const baseRotation = handQuat.clone();
     const flipY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
@@ -476,9 +622,9 @@ AFRAME.registerComponent('grab-manager', {
       if (spear.body) {
         // many physics engines expose position.set(x,y,z)
         if (spear.body.position && typeof spear.body.position.set === 'function') {
-          spear.body.position.set(targetPos.x, targetPos.y, targetPos.z);
+          spear.body.position.set(clampedTarget.x, clampedTarget.y, clampedTarget.z);
         } else if (spear.body.position) {
-          spear.body.position.x = targetPos.x; spear.body.position.y = targetPos.y; spear.body.position.z = targetPos.z;
+          spear.body.position.x = clampedTarget.x; spear.body.position.y = clampedTarget.y; spear.body.position.z = clampedTarget.z;
         }
 
         // quaternion may be different shape (CANNON has .set), try setting if available
@@ -488,12 +634,12 @@ AFRAME.registerComponent('grab-manager', {
           spear.body.quaternion.x = baseRotation.x; spear.body.quaternion.y = baseRotation.y; spear.body.quaternion.z = baseRotation.z; spear.body.quaternion.w = baseRotation.w;
         } else {
           // fallback to updating object3D
-          spear.object3D.position.copy(targetPos);
+          spear.object3D.position.copy(clampedTarget);
           spear.object3D.quaternion.copy(baseRotation);
         }
       } else {
         // No physics body: update object3D directly
-        spear.object3D.position.copy(targetPos);
+        spear.object3D.position.copy(clampedTarget);
         spear.object3D.quaternion.copy(baseRotation);
       }
     } catch (e) {
@@ -542,10 +688,11 @@ AFRAME.registerComponent('grab-manager', {
 
       // Determine fish type
       const caughtFishType = otherEl.getAttribute('data-fish-type') || otherEl.getAttribute('data-fish') || null;
+      console.log(`🎣 Caught fish type: ${caughtFishType}`);
 
       // Determine current bonus fish shown in UI (if any)
       let bonusFishType = null;
-      const bonusFishEntity = document.querySelector('#fish-3d');
+      const bonusFishEntity = document.querySelector('#fish-3d-world') || document.querySelector('#fish-3d');
       if (bonusFishEntity) {
         const rot = bonusFishEntity.components && bonusFishEntity.components['fish-rotator'];
         if (rot && rot.getCurrentFish) bonusFishType = rot.getCurrentFish();
@@ -554,29 +701,57 @@ AFRAME.registerComponent('grab-manager', {
           if (typeof m === 'string') bonusFishType = m.replace('#','');
         }
       }
+      console.log(`🎯 Bonus fish type: ${bonusFishType}`);
 
       const isCorrect = (caughtFishType && bonusFishType && caughtFishType === bonusFishType) || false;
-      const pointsEarned = isCorrect ? 10 : -5;
+      
+      // Appliquer le multiplicateur de dégâts de l'arme aux points
+      const weaponStats = (window.WEAPON_STATS && window.WEAPON_STATS.current) || { speed: 1.0, damage: 1.0 };
+      const damageMultiplier = weaponStats.damage || 1.0;
+      const basePoints = isCorrect ? 10 : -5;
+      const pointsEarned = Math.floor(basePoints * damageMultiplier);
+      
+      console.log(`⚖️ Is correct: ${isCorrect}, Base points: ${basePoints}, Damage multiplier: ${damageMultiplier}x, Points earned: ${pointsEarned}`);
 
       // record to game timer
       if (window.gameTimer && window.gameTimer.isGameActive && window.gameTimer.isGameActive()) {
+        console.log(`📝 Recording fish to game timer...`);
         window.gameTimer.addCaughtFish(caughtFishType || 'unknown', isCorrect, pointsEarned);
+      } else {
+        console.warn('⚠️ Game not active or gameTimer not found');
       }
 
       // update visible score display
       try {
-        const scoreDisplay = document.querySelector('#score-display');
+        const scoreDisplay = document.querySelector('#score-display-world') || document.querySelector('#score-display');
         if (scoreDisplay && window.gameTimer) {
           const count = (window.gameTimer.getCaughtFishes && window.gameTimer.getCaughtFishes().length) || 0;
           const points = (window.gameTimer.getTotalScore && window.gameTimer.getTotalScore()) || 0;
           scoreDisplay.setAttribute('value', `Fish: ${count} | Points: ${points}`);
+          console.log(`🔄 Display updated: Fish: ${count} | Points: ${points}`);
         }
-      } catch (e) {}
+      } catch (e) {
+        console.warn('⚠️ Error updating score display:', e);
+      }
 
       // advance bonus fish if correct
       try {
         if (isCorrect && bonusFishEntity && bonusFishEntity.components && bonusFishEntity.components['fish-rotator'] && bonusFishEntity.components['fish-rotator'].nextFish) {
+          console.log('➡️ Advancing to next bonus fish');
           bonusFishEntity.components['fish-rotator'].nextFish();
+        }
+      } catch (e) {
+        console.warn('⚠️ Error advancing bonus fish:', e);
+      }
+
+      // Play spear thrust sound (random from 3 sounds)
+      try {
+        const soundIndex = Math.floor(Math.random() * 3) + 1;
+        const sound = document.querySelector(`#spear-thrust-${soundIndex}`);
+        if (sound) {
+          sound.currentTime = 0;
+          sound.volume = 0.6;
+          sound.play().catch(e => console.warn('Sound play error:', e));
         }
       } catch (e) {}
 

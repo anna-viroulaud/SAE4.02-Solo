@@ -1,4 +1,4 @@
-// ============================================
+﻿// ============================================
 // SHIMS DE COMPATIBILITÉ POUR THREE.JS ET CANNON.JS
 // Ces patches corrigent les incompatibilités entre versions
 // ============================================
@@ -43,10 +43,8 @@
         }
       }
       THREE.Geometry = Geometry;
-      console.log('🔧 THREE.Geometry shim installed (class)');
     }
   } catch (e) {
-    console.warn('Geometry shim failed', e);
   }
 })();
 
@@ -65,11 +63,9 @@
           if (target === undefined || target === null) target = new THREE.Vector3();
           return origGetCenter.call(this, target);
         };
-        console.log('🔧 Box3.getCenter shim applied');
       }
     }
   } catch (e) {
-    console.warn('Box3.getCenter shim failed', e);
   }
 })();
 
@@ -86,7 +82,6 @@ window.addEventListener('load', function() {
         const Q = AFRAME.THREE.Quaternion.prototype;
         if (!Q.inverse) {
           Q.inverse = Q.invert || function () { return this.conjugate(); };
-          console.log('🔧 THREE.Quaternion.inverse shim applied');
         }
       }
 
@@ -96,13 +91,10 @@ window.addEventListener('load', function() {
           CANNON.Quaternion.prototype.inverse = function () {
             return new CANNON.Quaternion(-this.x, -this.y, -this.z, this.w);
           };
-          console.log('🔧 CANNON.Quaternion.inverse shim applied');
         }
       } else {
-        console.warn('⚠️ CANNON not loaded');
       }
     } catch (e) {
-      console.warn('Quaternion shim failed', e);
     }
   }, 100);
 });
@@ -134,9 +126,7 @@ window.addEventListener('load', function() {
         window.FISH_ZONE.wallPlanes = [];
       }
 
-      console.log('🧹 Cleanup on load: old spawns/fish removed, FISH_ZONE reset');
     } catch (e) {
-      console.warn('Cleanup failed', e);
     }
   }, 200);
 });

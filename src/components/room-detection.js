@@ -27,6 +27,7 @@ AFRAME.registerComponent('room-detection', {
     this.floorPlanes = [];      // Sols (horizontal bas)
     this.ceilingPlanes = [];    // Plafonds (horizontal haut)
     this.wallPlanes = [];       // Murs (vertical)
+    this.windowPlanes = [];     // Fenêtres (vertical petit)
     this.obstaclePlanes = [];   // Obstacles (tables, meubles - horizontal milieu)
 
     // Hit-test (style du professeur)
@@ -231,7 +232,9 @@ AFRAME.registerComponent('room-detection', {
     box.setAttribute('width', width);
     box.setAttribute('height', height);
     box.setAttribute('depth', depth);
-    box.setAttribute('material', 'color: #ff0000; opacity: 0.12; transparent: true; wireframe: true; side: double');
+    box.setAttribute('material', 'color: #ff0000; opacity: 0; transparent: true; wireframe: true; side: double');
+    box.setAttribute('visible', 'false'); // Zone rouge masquée
+    box.classList.add('room-boundary');
     box.setAttribute('geometry', 'primitive: box');
     
     console.log('📦 ZONE ROUGE créée avec rotation du sol :');
@@ -290,6 +293,7 @@ AFRAME.registerComponent('room-detection', {
         linewidth: 2
       });
       const line = new THREE.Line(lineGeom, lineMat);
+      line.visible = false; // Masquer la visualisation
       this.el.sceneEl.object3D.add(line);
       this.planeMeshes.push(line);
     }
@@ -316,11 +320,11 @@ AFRAME.registerComponent('room-detection', {
     const shapeMesh = new THREE.Mesh(shapeGeom, shapeMat);
     shapeMesh.matrixAutoUpdate = false;
     shapeMesh.matrix.copy(matrix);
+    shapeMesh.visible = false; // Masquer la visualisation
     
     this.el.sceneEl.object3D.add(shapeMesh);
     this.planeMeshes.push(shapeMesh);
     
-    console.log('✅ Visualisation polygonale créée - suit EXACTEMENT le sol détecté');
     
     this.el.sceneEl.appendChild(container);
   },
@@ -335,6 +339,7 @@ AFRAME.registerComponent('room-detection', {
       linewidth: 3
     });
     const line = new THREE.Line(lineGeom, lineMat);
+    line.visible = false; // Masquer la visualisation
     this.el.sceneEl.object3D.add(line);
     this.planeMeshes.push(line);
   },
@@ -353,7 +358,9 @@ AFRAME.registerComponent('room-detection', {
     box.setAttribute('width', width);
     box.setAttribute('height', data.height);
     box.setAttribute('depth', depth);
-    box.setAttribute('material', 'color: #ff0000; opacity: 0.12; transparent: true; wireframe: true; side: double');
+    box.setAttribute('material', 'color: #ff0000; opacity: 0; transparent: true; wireframe: true; side: double');
+    box.setAttribute('visible', 'false'); // Zone rouge masquée
+    box.classList.add('room-boundary');
     box.setAttribute('geometry', 'primitive: box');
     
     console.log('📦 ZONE ROUGE créée (bounds du sol) :');
@@ -453,6 +460,7 @@ AFRAME.registerComponent('room-detection', {
     this.floorPlanes = [];
     this.ceilingPlanes = [];
     this.wallPlanes = [];
+    this.windowPlanes = [];
     this.obstaclePlanes = [];
     this.hitSurfaces = new Map();
     this.clearPlaneVisuals();
@@ -910,6 +918,17 @@ AFRAME.registerComponent('room-detection', {
         }
 
         planeData.obstacleType = type;
+        // For tables, expand vertical bounds to represent a small volume above the surface
+        if (type === 'table') {
+          // Give a sensible vertical thickness so fish above the table are considered colliding
+          const extraTop = Math.min(1.2, Math.max(0.6, planeWidth * 0.2 + planeDepth * 0.05));
+          const extraBottom = 0.05; // small tolerance below plane
+          // Update bounds to include that volume (cap by previously known room bounds if available)
+          planeData.bounds.minY = (planeData.bounds.minY !== undefined) ? (planeData.bounds.minY - extraBottom) : (avgY - extraBottom);
+          planeData.bounds.maxY = (planeData.bounds.maxY !== undefined) ? (planeData.bounds.maxY + extraTop) : (avgY + extraTop);
+          // Store approximate obstacle height for later static-body creation
+          planeData.obstacleHeight = planeData.bounds.maxY - planeData.bounds.minY;
+        }
         this.obstaclePlanes.push({ plane, data: planeData });
 
         if (this.data.debug && type !== 'table') {
@@ -917,10 +936,21 @@ AFRAME.registerComponent('room-detection', {
         }
       }
     } else if (plane.orientation === 'vertical') {
-      // MUR
-      this.wallPlanes.push({ plane, data: planeData });
-      if (this.data.debug) {
-        console.log(`🔷 MUR: pos=(${planeData.position.x.toFixed(2)}, ${planeData.position.z.toFixed(2)})`);
+      // Distinguer entre FENÊTRE (petite surface) et MUR (grande surface)
+      const isWindow = planeArea < 2.0; // Moins de 2m² = fenêtre
+      
+      if (isWindow) {
+        planeData.wallType = 'window';
+        this.windowPlanes.push({ plane, data: planeData });
+        if (this.data.debug) {
+          console.log(`🪟 FENÊTRE: ${planeWidth.toFixed(2)}x${planeDepth.toFixed(2)}m (${planeArea.toFixed(2)}m²)`);
+        }
+      } else {
+        planeData.wallType = 'wall';
+        this.wallPlanes.push({ plane, data: planeData });
+        if (this.data.debug) {
+          console.log(`🔷 MUR: ${planeWidth.toFixed(2)}x${planeDepth.toFixed(2)}m (${planeArea.toFixed(2)}m²)`);
+        }
       }
     }
   },
@@ -998,6 +1028,7 @@ AFRAME.registerComponent('room-detection', {
     const lineSegments = new THREE.Line(lineGeometry, lineMaterial);
     lineSegments.matrixAutoUpdate = false;
     lineSegments.matrix.copy(matrix);
+    lineSegments.visible = false; // Masquer la visualisation
 
     this.el.sceneEl.object3D.add(lineSegments);
     this.planeMeshes.push(lineSegments);
@@ -1024,9 +1055,14 @@ AFRAME.registerComponent('room-detection', {
     const mesh = new THREE.Mesh(geometry, material);
     mesh.matrixAutoUpdate = false;
     mesh.matrix.copy(matrix);
+    mesh.visible = false; // Masquer la visualisation
 
     this.el.sceneEl.object3D.add(mesh);
     this.planeMeshes.push(mesh);
+    
+    // Créer le mesh d'occlusion pour cacher les objets virtuels derrière cette table
+    this.createOcclusionMesh(polygon, matrix, planeData);
+    
     // Marquer la visualisation comme créée pour ce plane
     planeData._visualCreated = true;
   },
@@ -1102,11 +1138,86 @@ AFRAME.registerComponent('room-detection', {
     wireframe.matrixAutoUpdate = false;
     wireframe.matrix.copy(matrix);
 
+    mesh.visible = false; // Masquer la visualisation
+    wireframe.visible = false; // Masquer le contour
     this.el.sceneEl.object3D.add(mesh);
     this.el.sceneEl.object3D.add(wireframe);
     this.planeMeshes.push(mesh, wireframe);
+    
+    // Créer le mesh d'occlusion pour cacher les objets virtuels derrière ce plan (mur, sol, etc.)
+    this.createOcclusionMesh(polygon, matrix, planeData);
+    
     // Marquer la visualisation comme créée pour ce plane
     planeData._visualCreated = true;
+  },
+
+  // Créer un mesh d'occlusion AR invisible qui cache les objets virtuels derrière les surfaces réelles
+  createOcclusionMesh: function (polygon, matrix, planeData) {
+    if (!polygon || polygon.length < 3) return;
+
+    // Créer la géométrie du polygon
+    const shape = new THREE.Shape();
+    shape.moveTo(polygon[0].x, polygon[0].z);
+    for (let i = 1; i < polygon.length; i++) {
+      shape.lineTo(polygon[i].x, polygon[i].z);
+    }
+    shape.closePath();
+
+    const geometry = new THREE.ShapeGeometry(shape);
+    geometry.rotateX(-Math.PI / 2);
+
+    // Matériau d'occlusion spécial :
+    // - colorWrite: false = invisible (ne dessine pas de couleur)
+    // - depthWrite: true = écrit dans le depth buffer
+    // - depthTest: true = teste la profondeur
+    // Résultat : bloque le rendu des objets derrière lui sans être visible lui-même
+    const occlusionMaterial = new THREE.MeshBasicMaterial({
+      colorWrite: false,  // Ne pas dessiner de couleur (invisible)
+      depthWrite: true,   // Écrire dans le depth buffer
+      depthTest: true,    // Tester la profondeur
+      side: THREE.DoubleSide
+    });
+
+    const occlusionMesh = new THREE.Mesh(geometry, occlusionMaterial);
+    occlusionMesh.matrixAutoUpdate = false;
+    occlusionMesh.matrix.copy(matrix);
+    occlusionMesh.renderOrder = -1; // Rendu en premier
+    
+    // Marquer ce mesh comme mesh d'occlusion pour le debug
+    occlusionMesh.userData.isOcclusionMesh = true;
+    occlusionMesh.userData.planeType = planeData.obstacleType || 'surface';
+
+    this.el.sceneEl.object3D.add(occlusionMesh);
+    this.planeMeshes.push(occlusionMesh);
+    
+    if (this.data.debug) {
+      console.log(`👻 Occlusion mesh créé pour ${planeData.obstacleType || 'surface'}`);
+    }
+  },
+
+  // Créer un mesh d'occlusion sous forme de boîte (pour les murs de la pièce)
+  createOcclusionBox: function (position, width, height, depth, label = 'wall') {
+    const geometry = new THREE.BoxGeometry(width, height, depth);
+    
+    const occlusionMaterial = new THREE.MeshBasicMaterial({
+      colorWrite: false,  // Invisible
+      depthWrite: true,   // Écrit dans le depth buffer
+      depthTest: true,
+      side: THREE.DoubleSide
+    });
+
+    const occlusionMesh = new THREE.Mesh(geometry, occlusionMaterial);
+    occlusionMesh.position.set(position.x, position.y, position.z);
+    occlusionMesh.renderOrder = -1;
+    occlusionMesh.userData.isOcclusionMesh = true;
+    occlusionMesh.userData.wallType = label;
+
+    this.el.sceneEl.object3D.add(occlusionMesh);
+    this.planeMeshes.push(occlusionMesh);
+    
+    if (this.data.debug) {
+      console.log(`👻 Occlusion box créée pour ${label}`);
+    }
   },
 
   updateScanUI: function () {
@@ -1160,6 +1271,7 @@ AFRAME.registerComponent('room-detection', {
     console.log(`\n✅ SCAN COMPLETE - ${totalPlanes} surfaces analyzed`);
     console.log(`   🟢 Sols: ${this.floorPlanes.length}`);
     console.log(`   🔷 Murs: ${this.wallPlanes.length}`);
+    console.log(`   🪟 Fenêtres: ${this.windowPlanes.length}`);
     console.log(`   🟠 Obstacles (tables, meubles): ${this.obstaclePlanes.length}`);
     console.log(`   🔵 Plafonds: ${this.ceilingPlanes.length}`);
     console.log(`   Total surfaces détectées par hit-test: ${this.hitSurfaces.size}\n`);
@@ -1283,6 +1395,34 @@ AFRAME.registerComponent('room-detection', {
       window.FISH_ZONE.floorY = roomData.floorY;
       window.FISH_ZONE.ceilingY = roomData.floorY + roomData.height;
       window.FISH_ZONE.scanned = true;
+      // Exposer aussi les obstacles et murs détectés pour les spawners
+      try {
+        // Create invisible static-body volumes for detected tables and walls
+        try { this._createStaticTableBodies(); } catch(e) { /* ignore */ }
+        try { this._createPhysicsColliders(); } catch(e) { console.error('Erreur création colliders:', e); }
+        
+        // Réinitialiser la vélocité de l'arme pour éviter qu'elle s'envole
+        setTimeout(() => {
+          try {
+            const spear = document.querySelector('#spear');
+            if (spear && spear.body) {
+              if (spear.body.velocity && typeof spear.body.velocity.set === 'function') {
+                spear.body.velocity.set(0, 0, 0);
+              }
+              if (spear.body.angularVelocity && typeof spear.body.angularVelocity.set === 'function') {
+                spear.body.angularVelocity.set(0, 0, 0);
+              }
+              // Mettre le body en sleep pour éviter tout mouvement initial
+              if (typeof spear.body.sleep === 'function') {
+                spear.body.sleep();
+              }
+            }
+          } catch(e) { console.warn('Could not reset spear velocity:', e); }
+        }, 100);
+        
+        window.FISH_ZONE.obstacles = this.obstaclePlanes || [];
+        window.FISH_ZONE.wallPlanes = this.wallPlanes || [];
+      } catch (e) { /* ignore */ }
     }
 
     // Émettre l'événement avec les données (INCLURE orientedBox!)
@@ -1297,6 +1437,7 @@ AFRAME.registerComponent('room-detection', {
       orientedBox: roomData.orientedBox || null,
       floorPlanes: this.floorPlanes,
       wallPlanes: this.wallPlanes,
+      windowPlanes: this.windowPlanes,
       obstaclePlanes: this.obstaclePlanes,
       ceilingPlanes: this.ceilingPlanes,
       allPlanes: this.detectedPlanes
@@ -1341,6 +1482,354 @@ AFRAME.registerComponent('room-detection', {
     };
 
     fade();
+  },
+
+  _createPhysicsColliders: function () {
+    // Créer des colliders physiques pour CHAQUE plan détecté par le casque
+    const scene = this.el.sceneEl;
+    
+    console.log('🧱 Création des colliders physiques basés sur les VRAIS plans détectés:');
+    console.log(`   - ${this.wallPlanes.length} murs`);
+    console.log(`   - ${this.floorPlanes.length} sols`);
+    console.log(`   - ${this.ceilingPlanes.length} plafonds`);
+    
+    let colliderCount = 0;
+    
+    // Délai pour s'assurer que physics-system est prêt
+    setTimeout(() => {
+      // 1. Créer les colliders pour les MURS (bleus)
+      this.wallPlanes.forEach(({ plane, data }, idx) => {
+        try {
+          const collider = this._createPlaneCollider(data, 'wall', idx);
+          if (collider) {
+            collider.setAttribute('visible', 'false'); // Invisible
+            scene.appendChild(collider);
+            colliderCount++;
+          }
+        } catch (e) {
+          console.warn(`Erreur création collider mur ${idx}:`, e);
+        }
+      });
+      
+      // 2. Créer les colliders pour le SOL (vert)
+      this.floorPlanes.forEach(({ plane, data }, idx) => {
+        try {
+          const collider = this._createPlaneCollider(data, 'floor', idx);
+          if (collider) {
+            collider.setAttribute('visible', 'false'); // Invisible
+            scene.appendChild(collider);
+            colliderCount++;
+          }
+        } catch (e) {
+          console.warn(`Erreur création collider sol ${idx}:`, e);
+        }
+      });
+      
+      // 3. Créer les colliders pour le PLAFOND (jaune)
+      this.ceilingPlanes.forEach(({ plane, data }, idx) => {
+        try {
+          const collider = this._createPlaneCollider(data, 'ceiling', idx);
+          if (collider) {
+            collider.setAttribute('visible', 'false'); // Invisible
+            scene.appendChild(collider);
+            colliderCount++;
+          }
+        } catch (e) {
+          console.warn(`Erreur création collider plafond ${idx}:`, e);
+        }
+      });
+      
+      console.log(`✅ ${colliderCount} colliders physiques créés sur les plans détectés`);
+    }, 500);
+  },
+  
+  _createPlaneCollider: function (planeData, type, idx) {
+    // Créer un collider box orienté pour un plan détecté
+    if (!planeData || !planeData.pose || !planeData.polygon) return null;
+    
+    const polygon = planeData.polygon;
+    const pose = planeData.pose;
+    
+    // Calculer les dimensions du plan dans son espace local
+    let minX = Infinity, maxX = -Infinity;
+    let minZ = Infinity, maxZ = -Infinity;
+    
+    polygon.forEach(v => {
+      minX = Math.min(minX, v.x);
+      maxX = Math.max(maxX, v.x);
+      minZ = Math.min(minZ, v.z);
+      maxZ = Math.max(maxZ, v.z);
+    });
+    
+    const width = maxX - minX;
+    const depth = maxZ - minZ;
+    const centerX = (minX + maxX) / 2;
+    const centerZ = (minZ + maxZ) / 2;
+    
+    // Transformer le centre en coordonnées monde
+    const matrix = new THREE.Matrix4();
+    matrix.fromArray(pose.transform.matrix);
+    const centerLocal = new THREE.Vector3(centerX, 0, centerZ);
+    centerLocal.applyMatrix4(matrix);
+    
+    // Extraire rotation
+    const quaternion = new THREE.Quaternion();
+    const position = new THREE.Vector3();
+    const scale = new THREE.Vector3();
+    matrix.decompose(position, quaternion, scale);
+    
+    const euler = new THREE.Euler();
+    euler.setFromQuaternion(quaternion);
+    const rotationY = THREE.MathUtils.radToDeg(euler.y);
+    const rotationX = THREE.MathUtils.radToDeg(euler.x);
+    const rotationZ = THREE.MathUtils.radToDeg(euler.z);
+    
+    // Créer l'entité A-Frame avec collider
+    const box = document.createElement('a-box');
+    box.setAttribute('id', `physics-collider-${type}-${idx}`);
+    
+    // Récupérer la hauteur de la pièce depuis window.FISH_ZONE
+    let roomHeight = 2.5;
+    let floorY = 0;
+    try {
+      if (window.FISH_ZONE && window.FISH_ZONE.floorY !== undefined) {
+        floorY = window.FISH_ZONE.floorY;
+      }
+      if (window.FISH_ZONE && window.FISH_ZONE.ceilingY !== undefined) {
+        roomHeight = window.FISH_ZONE.ceilingY - floorY;
+      }
+    } catch(e) {}
+    
+    // Dimensions selon le type de plan
+    if (type === 'wall') {
+      // Mur vertical : positionner au centre de la hauteur de la pièce
+      const wallCenterY = floorY + (roomHeight / 2);
+      box.setAttribute('position', `${centerLocal.x} ${wallCenterY} ${centerLocal.z}`);
+      box.setAttribute('rotation', `${rotationX} ${rotationY} ${rotationZ}`);
+      
+      // Dimensions du mur
+      box.setAttribute('width', Math.max(width, depth, 0.2)); // Largeur = plus grande dimension
+      box.setAttribute('height', roomHeight); // Hauteur = hauteur de la pièce
+      box.setAttribute('depth', 0.3); // Épaisseur augmentée pour meilleure détection
+      
+      // Masquer la visualisation (invisible pour l'utilisateur)
+      box.setAttribute('material', 'color: #0088ff; opacity: 0.3; transparent: true; wireframe: true');
+      box.setAttribute('visible', 'false');
+    } else if (type === 'floor' || type === 'ceiling') {
+      // Sol/plafond horizontal : position normale
+      box.setAttribute('position', `${centerLocal.x} ${centerLocal.y} ${centerLocal.z}`);
+      box.setAttribute('rotation', `0 ${rotationY} 0`);
+      
+      // Dimensions horizontales
+      box.setAttribute('width', Math.max(width, 0.1));
+      box.setAttribute('height', 0.2); // Épaisseur
+      box.setAttribute('depth', Math.max(depth, 0.1));
+      
+      // Invisible
+      box.setAttribute('visible', 'false');
+    }
+    
+    box.setAttribute('static-body', 'shape: box');
+    box.classList.add('room-boundary');
+    box.setAttribute('data-collider-type', type);
+    
+    return box;
+  },
+
+  _createStaticWallBodies: function (roomData) {
+    // Create invisible physics walls for the room boundaries
+    const scene = this.el.sceneEl;
+    const height = roomData.height || 2.5;
+    const floorY = roomData.floorY || 0;
+    const centerY = floorY + height / 2;
+    
+    // Use the spawn-zone-bounds dimensions as the room boundaries
+    const bounds = roomData.bounds;
+    if (!bounds) {
+      console.warn('⚠️ Pas de bounds disponibles pour créer les murs physiques');
+      return;
+    }
+    
+    const minX = bounds.minX;
+    const maxX = bounds.maxX;
+    const minZ = bounds.minZ;
+    const maxZ = bounds.maxZ;
+    const width = maxX - minX;
+    const depth = maxZ - minZ;
+    const centerX = (minX + maxX) / 2;
+    const centerZ = (minZ + maxZ) / 2;
+    
+    console.log('🧱 Création des murs physiques:');
+    console.log(`   Bounds: X[${minX.toFixed(2)}, ${maxX.toFixed(2)}] Z[${minZ.toFixed(2)}, ${maxZ.toFixed(2)}]`);
+    console.log(`   Centre: (${centerX.toFixed(2)}, ${centerY.toFixed(2)}, ${centerZ.toFixed(2)})`);
+    console.log(`   Dimensions: ${width.toFixed(2)}m x ${height.toFixed(2)}m x ${depth.toFixed(2)}m`);
+    
+    // Wall thickness
+    const wallThickness = 0.2; // Augmenté de 0.1 à 0.2 pour meilleure détection
+    
+    // Sauvegarder le contexte pour utiliser dans setTimeout
+    const self = this;
+    
+    // Créer les murs avec un délai pour s'assurer que physics-system est prêt
+    setTimeout(() => {
+      // North wall (max Z)
+      const northWall = document.createElement('a-box');
+      northWall.setAttribute('id', 'physics-wall-north');
+      northWall.setAttribute('position', `${centerX} ${centerY} ${maxZ + wallThickness/2}`);
+      northWall.setAttribute('width', width);
+      northWall.setAttribute('height', height);
+      northWall.setAttribute('depth', wallThickness);
+      northWall.setAttribute('static-body', 'shape: box');
+      northWall.setAttribute('material', 'color: #0000ff; opacity: 0.3; transparent: true; wireframe: true');
+      northWall.setAttribute('visible', 'false'); // Masquer la visualisation
+      northWall.classList.add('room-boundary');
+      scene.appendChild(northWall);
+      console.log('   ✅ Mur Nord créé');
+      // Créer le mesh d'occlusion pour le mur nord
+      self.createOcclusionBox(
+        { x: centerX, y: centerY, z: maxZ + wallThickness/2 },
+        width, height, wallThickness, 'mur-nord'
+      );
+      
+      // South wall (min Z)
+      const southWall = document.createElement('a-box');
+      southWall.setAttribute('id', 'physics-wall-south');
+      southWall.setAttribute('position', `${centerX} ${centerY} ${minZ - wallThickness/2}`);
+      southWall.setAttribute('width', width);
+      southWall.setAttribute('height', height);
+      southWall.setAttribute('depth', wallThickness);
+      southWall.setAttribute('static-body', 'shape: box');
+      southWall.setAttribute('material', 'color: #0000ff; opacity: 0.3; transparent: true; wireframe: true');
+      southWall.setAttribute('visible', 'false'); // Masquer la visualisation
+      southWall.classList.add('room-boundary');
+      scene.appendChild(southWall);
+      console.log('   ✅ Mur Sud créé');
+      // Créer le mesh d'occlusion pour le mur sud
+      self.createOcclusionBox(
+        { x: centerX, y: centerY, z: minZ - wallThickness/2 },
+        width, height, wallThickness, 'mur-sud'
+      );
+      
+      // East wall (max X)
+      const eastWall = document.createElement('a-box');
+      eastWall.setAttribute('id', 'physics-wall-east');
+      eastWall.setAttribute('position', `${maxX + wallThickness/2} ${centerY} ${centerZ}`);
+      eastWall.setAttribute('width', wallThickness);
+      eastWall.setAttribute('height', height);
+      eastWall.setAttribute('depth', depth);
+      eastWall.setAttribute('static-body', 'shape: box');
+      eastWall.setAttribute('material', 'color: #0000ff; opacity: 0.3; transparent: true; wireframe: true');
+      eastWall.setAttribute('visible', 'false'); // Masquer la visualisation
+      eastWall.classList.add('room-boundary');
+      scene.appendChild(eastWall);
+      console.log('   ✅ Mur Est créé');
+      // Créer le mesh d'occlusion pour le mur est
+      self.createOcclusionBox(
+        { x: maxX + wallThickness/2, y: centerY, z: centerZ },
+        wallThickness, height, depth, 'mur-est'
+      );
+      
+      // West wall (min X)
+      const westWall = document.createElement('a-box');
+      westWall.setAttribute('id', 'physics-wall-west');
+      westWall.setAttribute('position', `${minX - wallThickness/2} ${centerY} ${centerZ}`);
+      westWall.setAttribute('width', wallThickness);
+      westWall.setAttribute('height', height);
+      westWall.setAttribute('depth', depth);
+      westWall.setAttribute('static-body', 'shape: box');
+      westWall.setAttribute('material', 'color: #0000ff; opacity: 0.3; transparent: true; wireframe: true');
+      westWall.setAttribute('visible', 'false'); // Masquer la visualisation
+      westWall.classList.add('room-boundary');
+      scene.appendChild(westWall);
+      console.log('   ✅ Mur Ouest créé');
+      // Créer le mesh d'occlusion pour le mur ouest
+      self.createOcclusionBox(
+        { x: minX - wallThickness/2, y: centerY, z: centerZ },
+        wallThickness, height, depth, 'mur-ouest'
+      );
+      
+      // Floor
+      const floor = document.createElement('a-box');
+      floor.setAttribute('id', 'physics-floor');
+      floor.setAttribute('position', `${centerX} ${floorY - wallThickness/2} ${centerZ}`);
+      floor.setAttribute('width', width);
+      floor.setAttribute('height', wallThickness);
+      floor.setAttribute('depth', depth);
+      floor.setAttribute('static-body', 'shape: box');
+      floor.setAttribute('material', 'color: #00ff00; opacity: 0.2; transparent: true; wireframe: true');
+      floor.setAttribute('visible', 'false'); // Masquer la visualisation
+      floor.classList.add('room-boundary');
+      scene.appendChild(floor);
+      console.log('   ✅ Sol créé');
+      // Créer le mesh d'occlusion pour le sol
+      self.createOcclusionBox(
+        { x: centerX, y: floorY - wallThickness/2, z: centerZ },
+        width, wallThickness, depth, 'sol'
+      );
+      
+      // Ceiling
+      const ceiling = document.createElement('a-box');
+      ceiling.setAttribute('id', 'physics-ceiling');
+      ceiling.setAttribute('position', `${centerX} ${floorY + height + wallThickness/2} ${centerZ}`);
+      ceiling.setAttribute('width', width);
+      ceiling.setAttribute('height', wallThickness);
+      ceiling.setAttribute('depth', depth);
+      ceiling.setAttribute('static-body', 'shape: box');
+      ceiling.setAttribute('material', 'color: #ffff00; opacity: 0.2; transparent: true; wireframe: true');
+      ceiling.setAttribute('visible', 'false'); // Masquer la visualisation
+      ceiling.classList.add('room-boundary');
+      scene.appendChild(ceiling);
+      console.log('   ✅ Plafond créé');
+      // Créer le mesh d'occlusion pour le plafond
+      self.createOcclusionBox(
+        { x: centerX, y: floorY + height + wallThickness/2, z: centerZ },
+        width, wallThickness, depth, 'plafond'
+      );
+      
+      console.log('🧱 Tous les murs physiques créés (VISIBLES pour debug)');
+    }, 500); // Délai de 500ms pour s'assurer que physics-system est prêt
+  },
+
+  _createStaticTableBodies: function () {
+    // Create invisible A-Frame static bodies for each detected table so physics and
+    // other components can collide with the whole table surface (not just edges).
+    if (!this.obstaclePlanes || this.obstaclePlanes.length === 0) return;
+    const scene = this.el.sceneEl;
+    let idx = 0;
+    this.obstaclePlanes.forEach(({ data }) => {
+      try {
+        if (!data || data.obstacleType !== 'table') return;
+
+        const bounds = data.bounds || {};
+        const width = (bounds.maxX - bounds.minX) || (data.dimensions && data.dimensions.width) || 0.5;
+        const depth = (bounds.maxZ - bounds.minZ) || (data.dimensions && data.dimensions.depth) || 0.5;
+        const minY = (bounds.minY !== undefined) ? bounds.minY : (data.worldY || 0);
+        const maxY = (bounds.maxY !== undefined) ? bounds.maxY : (data.worldY || 0) + 0.8;
+        const height = Math.max(0.05, maxY - minY);
+        const centerX = (bounds.minX + bounds.maxX) / 2 || (data.position && data.position.x) || 0;
+        const centerZ = (bounds.minZ + bounds.maxZ) / 2 || (data.position && data.position.z) || 0;
+        const centerY = (minY + maxY) / 2;
+
+        const ent = document.createElement('a-box');
+        ent.classList.add('table-obstacle');
+        ent.setAttribute('id', `table-obstacle-${idx}`);
+        ent.setAttribute('position', `${centerX} ${centerY} ${centerZ}`);
+        ent.setAttribute('width', `${Math.max(0.05, width)}`);
+        ent.setAttribute('depth', `${Math.max(0.05, depth)}`);
+        ent.setAttribute('height', `${height}`);
+        // Keep invisible (non-visible) to avoid duplicating the yellow visual
+        ent.setAttribute('visible', 'false');
+        // Add physics static-body so dynamic objects (spear) can collide
+        ent.setAttribute('static-body', '');
+        // Also mark for debugging if needed
+        ent.setAttribute('data-obstacle-type', 'table');
+
+        scene.appendChild(ent);
+        idx++;
+      } catch (e) {
+        // ignore single obstacle failures
+      }
+    });
   },
 
   remove: function () {

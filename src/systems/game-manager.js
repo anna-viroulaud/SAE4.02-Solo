@@ -1,4 +1,4 @@
-// Game manager system: handles UI buttons and AR session entry
+﻿// Game manager system: handles UI buttons and AR session entry
 (function () {
   // Wait until DOM ready
   function initARButton() {
@@ -27,9 +27,7 @@
           scene.removeEventListener('exit-vr', onExitAR);
         });
 
-        console.log('Mode AR activé - passthrough actif !');
       } catch (err) {
-        console.error('Erreur lors du lancement AR:', err);
         alert('Erreur: ' + err.message);
       }
     });
@@ -57,12 +55,39 @@
   // Setup simple game UI handlers (start/restart/quit)
   function initGameUI() {
     const start3D = document.querySelector('#start-button-3d');
+    // Hide the HTML High Scores button by default until the room scan completes
+    const highScoresBtnHTML = document.getElementById('high-scores-btn');
+    if (highScoresBtnHTML) {
+      highScoresBtnHTML.style.display = 'none';
+      highScoresBtnHTML.style.pointerEvents = 'none';
+    }
     const scene = document.querySelector('a-scene');
     if (start3D) {
       // Ensure hidden by default (will be shown after room-scanned)
       start3D.setAttribute('visible', 'false');
       start3D.addEventListener('click', () => {
+        // Play button sound
+        try {
+          const buttonSound = document.querySelector('#button-press');
+          if (buttonSound) {
+            buttonSound.currentTime = 0;
+            buttonSound.volume = 0.5;
+          }
+        } catch (e) {}
+        
         start3D.setAttribute('visible', 'false');
+        
+        // Hide high scores button and AR button when game starts
+        const highScores3DBtn = document.querySelector('#high-scores-btn-3d');
+        if (highScores3DBtn) highScores3DBtn.setAttribute('visible', 'false');
+        const highScoresBtnHTML = document.getElementById('high-scores-btn');
+        if (highScoresBtnHTML) {
+          highScoresBtnHTML.style.display = 'none';
+          highScoresBtnHTML.style.pointerEvents = 'none';
+        }
+        const arOverlay = document.getElementById('ar-overlay');
+        if (arOverlay) arOverlay.style.display = 'none';
+        
         try {
           // 1) reveal the weapon
           const spear = document.querySelector('#spear');
@@ -72,6 +97,21 @@
           const water = document.querySelector('#water-surface');
           const scene = document.querySelector('a-scene');
           if (water) {
+            // Play underwater loop and ocean wave sounds BEFORE starting the rise
+            try {
+              const underwaterLoop = document.querySelector('#underwater-loop');
+              if (underwaterLoop) {
+                underwaterLoop.currentTime = 0;
+                underwaterLoop.volume = 0.3;
+              }
+              const oceanWave = document.querySelector('#ocean-wave');
+              if (oceanWave) {
+                oceanWave.currentTime = 0;
+                oceanWave.volume = 0.5;
+              }
+            } catch (e) {
+            }
+            
             // Prefer the water-adapter API to start the rise so it only runs once
             const adapter = water.components && water.components['water-adapter'];
             try {
@@ -88,19 +128,25 @@
                   water.setAttribute('animation__rise', 'property: position; to: 0 2.5 -2; dur: 10000; easing: easeInOutQuad');
                 }
               }
-            } catch (e) { console.warn('game-manager: startRise failed', e); }
+            } catch (e) {}
 
             const onAnim = (ev) => {
               try { water.removeEventListener('animationcomplete', onAnim); } catch (e) {}
-              // spawn fishes (use fish-spawner API) then start timer
+              // spawn fishes depuis les fenêtres (window-spawner au lieu de fish-spawner)
               try {
-                const spawner = document.querySelector('[fish-spawner]');
-                if (spawner && spawner.components && spawner.components['fish-spawner'] && spawner.components['fish-spawner'].startSpawn) {
-                  spawner.components['fish-spawner'].startSpawn();
+                const windowSpawner = document.querySelector('[window-spawner]');
+                if (windowSpawner && windowSpawner.components && windowSpawner.components['window-spawner'] && windowSpawner.components['window-spawner'].startSpawning) {
+                  windowSpawner.components['window-spawner'].startSpawning();
+                } else {
+                  // Fallback: utiliser fish-spawner si window-spawner n'est pas disponible
+                  const spawner = document.querySelector('[fish-spawner]');
+                  if (spawner && spawner.components && spawner.components['fish-spawner'] && spawner.components['fish-spawner'].startSpawn) {
+                    spawner.components['fish-spawner'].startSpawn();
+                  }
                 }
-              } catch (e) { console.warn('game-manager: spawn after rise failed', e); }
+              } catch (e) {}
 
-              try { if (window.gameTimer && window.gameTimer.startGame) window.gameTimer.startGame(60); } catch (e) {}
+              try { if (window.gameTimer && window.gameTimer.startGame) window.gameTimer.startGame(120); } catch (e) {}
             };
 
             // listen for animationcomplete
@@ -108,32 +154,345 @@
           } else {
             // If no water entity, just spawn and start
             try {
-              const spawner = document.querySelector('[fish-spawner]');
-              if (spawner && spawner.components && spawner.components['fish-spawner'] && spawner.components['fish-spawner'].startSpawn) spawner.components['fish-spawner'].startSpawn();
+              const windowSpawner = document.querySelector('[window-spawner]');
+              if (windowSpawner && windowSpawner.components && windowSpawner.components['window-spawner'] && windowSpawner.components['window-spawner'].startSpawning) {
+                windowSpawner.components['window-spawner'].startSpawning();
+              } else {
+                // Fallback
+                const spawner = document.querySelector('[fish-spawner]');
+                if (spawner && spawner.components && spawner.components['fish-spawner'] && spawner.components['fish-spawner'].startSpawn) spawner.components['fish-spawner'].startSpawn();
+              }
             } catch (e) {}
-            try { if (window.gameTimer && window.gameTimer.startGame) window.gameTimer.startGame(60); } catch (e) {}
+            try { if (window.gameTimer && window.gameTimer.startGame) window.gameTimer.startGame(120); } catch (e) {}
           }
-        } catch (e) { console.warn('start button handler error', e); }
+        } catch (e) {}
       });
 
       // Show the start button only after the room scan completes
       if (scene) {
+        // When entering XR, ensure HTML overlay buttons are hidden while scanning
+        scene.addEventListener('enter-vr', () => {
+          try {
+            if (highScoresBtnHTML) {
+              highScoresBtnHTML.style.display = 'none';
+              highScoresBtnHTML.style.pointerEvents = 'none';
+            }
+            const playBtnHTML = document.getElementById('play-btn');
+            if (playBtnHTML) playBtnHTML.style.display = 'none';
+          } catch (e) { /* ignore */ }
+        });
+
         scene.addEventListener('room-scanned', (ev) => {
           // Small delay to allow visuals/UI to settle
-          setTimeout(() => start3D.setAttribute('visible', 'true'), 300);
+          setTimeout(() => {
+            start3D.setAttribute('visible', 'true');
+            // Also show high scores 3D button
+            const highScores3D = document.querySelector('#high-scores-btn-3d');
+            if (highScores3D) highScores3D.setAttribute('visible', 'true');
+            // Reveal the HTML high-scores button now the scan is complete
+            if (highScoresBtnHTML) {
+              highScoresBtnHTML.style.display = 'flex';
+              highScoresBtnHTML.style.pointerEvents = 'auto';
+            }
+          }, 300);
         }, { once: true });
+        
+        // FALLBACK: If no room scan happens within 10 seconds, show buttons anyway
+        // This ensures buttons are visible even without WebXR/AR
+        setTimeout(() => {
+          if (!window.FISH_ZONE || !window.FISH_ZONE.scanned) {
+            start3D.setAttribute('visible', 'true');
+            const highScores3D = document.querySelector('#high-scores-btn-3d');
+            if (highScores3D) highScores3D.setAttribute('visible', 'true');
+            if (highScoresBtnHTML) {
+              highScoresBtnHTML.style.display = 'flex';
+              highScoresBtnHTML.style.pointerEvents = 'auto';
+            }
+          }
+        }, 10000);
       }
     }
 
     const btnRestart = document.getElementById('btn-restart');
-    if (btnRestart) btnRestart.addEventListener('click', () => { if (window.gameTimer && window.gameTimer.resetGame) { window.gameTimer.resetGame(); window.gameTimer.startGame(60); } });
+    if (btnRestart) btnRestart.addEventListener('click', () => { 
+      // Play button sound
+      try {
+        const buttonSound = document.querySelector('#button-press');
+        if (buttonSound) {
+          buttonSound.currentTime = 0;
+          buttonSound.volume = 0.5;
+        }
+      } catch (e) {}
+      
+      if (window.gameTimer && window.gameTimer.resetGame) { 
+        // NE PAS afficher les boutons menu lors d'un restart (false)
+        window.gameTimer.resetGame(false); 
+        // Relancer le spawn depuis les fenêtres
+        try {
+          const windowSpawner = document.querySelector('[window-spawner]');
+          if (windowSpawner && windowSpawner.components && windowSpawner.components['window-spawner'] && windowSpawner.components['window-spawner'].startSpawning) {
+            setTimeout(() => {
+              windowSpawner.components['window-spawner'].startSpawning();
+            }, 500); // Petit délai pour s'assurer que le reset est complet
+          }
+        } catch (e) {}
+        window.gameTimer.startGame(120); 
+      } 
+    });
     const btnQuit = document.getElementById('btn-quit');
-    if (btnQuit) btnQuit.addEventListener('click', () => { if (window.gameTimer && window.gameTimer.resetGame) window.gameTimer.resetGame(); });
+    if (btnQuit) btnQuit.addEventListener('click', () => { 
+      // Play button sound
+      try {
+        const buttonSound = document.querySelector('#button-press');
+        if (buttonSound) {
+          buttonSound.currentTime = 0;
+          buttonSound.volume = 0.5;
+        }
+      } catch (e) {}
+      
+      if (window.gameTimer && window.gameTimer.resetGame) window.gameTimer.resetGame();
+      // Show ONLY high scores button on quit (not Play)
+      const highScores3DBtn = document.querySelector('#high-scores-btn-3d');
+      if (highScores3DBtn && window.FISH_ZONE && window.FISH_ZONE.scanned) highScores3DBtn.setAttribute('visible', 'true');
+      const highScoresBtnHTML = document.getElementById('high-scores-btn');
+      if (highScoresBtnHTML) highScoresBtnHTML.style.display = 'flex';
+    });
 
     const btnRestart3D = document.querySelector('#btn-restart-3d');
-    if (btnRestart3D) btnRestart3D.addEventListener('click', () => { if (window.gameTimer && window.gameTimer.resetGame) { window.gameTimer.resetGame(); window.gameTimer.startGame(60); } });
+    if (btnRestart3D) btnRestart3D.addEventListener('click', () => { 
+      if (window.gameTimer && window.gameTimer.resetGame) { 
+        // NE PAS afficher les boutons menu lors d'un restart (false)
+        window.gameTimer.resetGame(false); 
+        // Relancer le spawn depuis les fenêtres
+        try {
+          const windowSpawner = document.querySelector('[window-spawner]');
+          if (windowSpawner && windowSpawner.components && windowSpawner.components['window-spawner'] && windowSpawner.components['window-spawner'].startSpawning) {
+            setTimeout(() => {
+              windowSpawner.components['window-spawner'].startSpawning();
+            }, 500);
+          }
+        } catch (e) {}
+        window.gameTimer.startGame(120); 
+      } 
+    });
     const btnQuit3D = document.querySelector('#btn-quit-3d');
-    if (btnQuit3D) btnQuit3D.addEventListener('click', () => { if (window.gameTimer && window.gameTimer.resetGame) window.gameTimer.resetGame(); });
+    if (btnQuit3D) btnQuit3D.addEventListener('click', () => { 
+      if (window.gameTimer && window.gameTimer.resetGame) window.gameTimer.resetGame();
+      // Show ONLY high scores button on quit (not Play)
+      const highScores3DBtn = document.querySelector('#high-scores-btn-3d');
+      if (highScores3DBtn && window.FISH_ZONE && window.FISH_ZONE.scanned) highScores3DBtn.setAttribute('visible', 'true');
+      const highScoresBtnHTML = document.getElementById('high-scores-btn');
+      if (highScoresBtnHTML) highScoresBtnHTML.style.display = 'flex';
+    });
+
+    // High Scores button
+    const highScoresBtn = document.getElementById('high-scores-btn');
+    const highScoresPanel = document.getElementById('high-scores-panel');
+    const closeHighScores = document.getElementById('close-high-scores');
+    
+    // Helper function to hide/show buttons when panel is open/closed
+    function hideButtons() {
+      // Hide HTML button
+      if (highScoresBtn) highScoresBtn.style.display = 'none';
+      // Hide 3D buttons
+      const start3DBtn = document.querySelector('#start-button-3d');
+      const highScores3DBtn = document.querySelector('#high-scores-btn-3d');
+      if (start3DBtn) start3DBtn.setAttribute('visible', 'false');
+      if (highScores3DBtn) highScores3DBtn.setAttribute('visible', 'false');
+    }
+    
+    function showButtons() {
+      // Show HTML button
+      if (highScoresBtn) highScoresBtn.style.display = 'flex';
+      
+      // Show ONLY high scores 3D button (NOT Play - Play is shown only after room-scanned)
+      if (window.FISH_ZONE && window.FISH_ZONE.scanned) {
+        const highScores3DBtn = document.querySelector('#high-scores-btn-3d');
+        if (highScores3DBtn) highScores3DBtn.setAttribute('visible', 'true');
+      }
+    }
+    
+    if (highScoresBtn) {
+      highScoresBtn.addEventListener('click', () => {
+        // Play button sound
+        try {
+          const buttonSound = document.querySelector('#button-press');
+          if (buttonSound) {
+            buttonSound.currentTime = 0;
+            buttonSound.volume = 0.5;
+          }
+        } catch (e) {}
+        
+        // Only open if game is not active and end screen is not shown
+        if (window.gameTimer && window.gameTimer.isGameActive && window.gameTimer.isGameActive()) {
+          return;
+        }
+        const endGameScreen = document.getElementById('end-game-screen');
+        if (endGameScreen && endGameScreen.style.display === 'flex') {
+          return;
+        }
+        if (highScoresPanel) {
+          highScoresPanel.style.display = 'flex';
+          hideButtons();
+          displayHighScores();
+        }
+      });
+    }
+    
+    if (closeHighScores) {
+      closeHighScores.addEventListener('click', () => {
+        // Play button sound
+        try {
+          const buttonSound = document.querySelector('#button-press');
+          if (buttonSound) {
+            buttonSound.currentTime = 0;
+            buttonSound.volume = 0.5;
+          }
+        } catch (e) {}
+        
+        if (highScoresPanel) {
+          highScoresPanel.style.display = 'none';
+          showButtons();
+        }
+      });
+    }
+    
+    // Close panel when clicking outside
+    if (highScoresPanel) {
+      highScoresPanel.addEventListener('click', (e) => {
+        if (e.target === highScoresPanel) {
+          highScoresPanel.style.display = 'none';
+          showButtons();
+        }
+      });
+    }
+
+    function displayHighScores() {
+      const list = document.getElementById('high-scores-list');
+      if (!list || !window.gameTimer) return;
+      
+      const scores = window.gameTimer.getHighScores();
+      const top3 = scores.slice(0, 3);
+      
+      if (top3.length === 0) {
+        list.innerHTML = '<div class="no-scores">Aucun score enregistré pour le moment.<br>Jouez une partie pour commencer !</div>';
+        return;
+      }
+      
+      let html = '';
+      top3.forEach((entry, index) => {
+        const medal = ['🥇', '🥈', '🥉'][index];
+        const rank = index + 1;
+        html += `
+          <div class="score-entry rank-${rank}">
+            <div class="score-rank">${medal} ${rank}.</div>
+            <div class="score-details">
+              <div class="score-points">${entry.score} points</div>
+              <div class="score-date">${entry.date}</div>
+            </div>
+          </div>
+        `;
+      });
+      
+      list.innerHTML = html;
+    }
+
+    // High Scores 3D button for VR
+    const highScoresBtn3D = document.querySelector('#high-scores-btn-3d');
+    const highScoresPanel3D = document.querySelector('#high-scores-panel-3d');
+    const closeHighScores3D = document.querySelector('#close-high-scores-3d');
+    
+    if (highScoresBtn3D) {
+      highScoresBtn3D.addEventListener('click', () => {
+        // Only open if game is not active and end screen is not shown
+        if (window.gameTimer && window.gameTimer.isGameActive && window.gameTimer.isGameActive()) {
+          return;
+        }
+        const endScreen3D = document.querySelector('#end-screen-3d');
+        if (endScreen3D && endScreen3D.getAttribute('visible') === 'true') {
+          return;
+        }
+        if (highScoresPanel3D) {
+          highScoresPanel3D.setAttribute('visible', 'true');
+          hideButtons();
+          displayHighScores3D();
+        }
+      });
+    }
+    
+    if (closeHighScores3D) {
+      closeHighScores3D.addEventListener('click', () => {
+        if (highScoresPanel3D) {
+          highScoresPanel3D.setAttribute('visible', 'false');
+          showButtons();
+        }
+      });
+    }
+    
+    function displayHighScores3D() {
+      const list = document.querySelector('#high-scores-list-3d');
+      if (!list || !window.gameTimer) return;
+      
+      // Clear existing content
+      while (list.firstChild) list.removeChild(list.firstChild);
+      
+      const scores = window.gameTimer.getHighScores();
+      const top3 = scores.slice(0, 3);
+      
+      if (top3.length === 0) {
+        const noScoresText = document.createElement('a-text');
+        noScoresText.setAttribute('value', 'Aucun score enregistré.\nJouez une partie !');
+        noScoresText.setAttribute('align', 'center');
+        noScoresText.setAttribute('color', '#999999');
+        noScoresText.setAttribute('width', '1.2');
+        noScoresText.setAttribute('position', '0 0 0');
+        list.appendChild(noScoresText);
+        return;
+      }
+      
+      const medals = ['🥇', '🥈', '🥉'];
+      let yPos = 0;
+      
+      top3.forEach((entry, index) => {
+        // Background for each entry
+        const bg = document.createElement('a-plane');
+        bg.setAttribute('color', index === 0 ? '#FFD700' : '#4a90e2');
+        bg.setAttribute('opacity', index === 0 ? '0.15' : '0.1');
+        bg.setAttribute('width', '0.7');
+        bg.setAttribute('height', '0.08');
+        bg.setAttribute('position', `0 ${yPos} -0.005`);
+        list.appendChild(bg);
+        
+        // Rank and medal
+        const rankText = document.createElement('a-text');
+        rankText.setAttribute('value', `${medals[index]} ${index + 1}.`);
+        rankText.setAttribute('align', 'left');
+        rankText.setAttribute('color', index === 0 ? '#FFD700' : '#ffffff');
+        rankText.setAttribute('width', '1');
+        rankText.setAttribute('position', `-0.32 ${yPos} 0`);
+        list.appendChild(rankText);
+        
+        // Score
+        const scoreText = document.createElement('a-text');
+        scoreText.setAttribute('value', `${entry.score} pts`);
+        scoreText.setAttribute('align', 'center');
+        scoreText.setAttribute('color', index === 0 ? '#FFD700' : '#4a90e2');
+        scoreText.setAttribute('width', '1');
+        scoreText.setAttribute('position', `0.05 ${yPos} 0`);
+        list.appendChild(scoreText);
+        
+        // Date (smaller)
+        const dateText = document.createElement('a-text');
+        dateText.setAttribute('value', entry.date.split(' ')[0] || entry.date);
+        dateText.setAttribute('align', 'right');
+        dateText.setAttribute('color', '#888888');
+        dateText.setAttribute('width', '0.7');
+        dateText.setAttribute('position', `0.32 ${yPos} 0`);
+        list.appendChild(dateText);
+        
+        yPos -= 0.1;
+      });
+    }
   }
 
   if (document.readyState === 'complete' || document.readyState === 'interactive') initGameUI(); else document.addEventListener('DOMContentLoaded', initGameUI);
